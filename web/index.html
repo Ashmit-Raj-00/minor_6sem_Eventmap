@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EventMap</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">EventMap</div>
+      <div class="userbar">
+        <span id="whoami" class="muted">Not signed in</span>
+        <button id="logoutBtn" class="btn btn-quiet" hidden>Logout</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Auth</h2>
+        <div class="grid2">
+          <div class="card">
+            <h3>Login</h3>
+            <label>Email <input id="loginEmail" type="email" autocomplete="email" /></label>
+            <label>Password <input id="loginPassword" type="password" autocomplete="current-password" /></label>
+            <button id="loginBtn" class="btn">Login</button>
+          </div>
+          <div class="card">
+            <h3>Register</h3>
+            <label>Email <input id="regEmail" type="email" autocomplete="email" /></label>
+            <label>Password <input id="regPassword" type="password" autocomplete="new-password" /></label>
+            <label>
+              Role
+              <select id="regRole">
+                <option value="attendee">attendee</option>
+                <option value="organizer">organizer</option>
+              </select>
+            </label>
+            <button id="registerBtn" class="btn btn-secondary">Create account</button>
+          </div>
+        </div>
+        <div id="authMsg" class="msg"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panelHeader">
+          <h2>Map</h2>
+          <div class="row">
+            <button id="locateBtn" class="btn btn-quiet">Use my location</button>
+            <label class="inline">
+              Radius (km)
+              <input id="radiusKm" type="number" min="0" step="0.5" value="10" />
+            </label>
+            <button id="refreshBtn" class="btn btn-quiet">Refresh</button>
+          </div>
+        </div>
+        <div id="map" class="map"></div>
+        <div class="hint muted">
+          Tip: click on the map to set the event location before creating an event.
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Events</h2>
+
+        <div id="createWrap" class="card" hidden>
+          <h3>Create Event (organizer/admin)</h3>
+          <label>Title <input id="evTitle" type="text" /></label>
+          <label>Description <textarea id="evDesc" rows="3"></textarea></label>
+          <div class="grid2">
+            <label>Starts <input id="evStart" type="datetime-local" /></label>
+            <label>Ends <input id="evEnd" type="datetime-local" /></label>
+          </div>
+          <label>Address <input id="evAddress" type="text" placeholder="(optional)" /></label>
+          <div class="row">
+            <div class="pill">
+              <span class="muted">Pinned:</span>
+              <span id="pinnedLatLng" class="mono">—</span>
+            </div>
+            <button id="createEventBtn" class="btn">Create</button>
+          </div>
+          <div id="createMsg" class="msg"></div>
+        </div>
+
+        <div id="eventsList" class="list"></div>
+      </section>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="app.js"></script>
+  </body>
+</html>
+

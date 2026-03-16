@@ -33,6 +33,7 @@ func NewHandler(cfg HandlerConfig) http.Handler {
 	mux.HandleFunc("/api/auth/login", h.login)
 	mux.HandleFunc("/api/me", h.me)
 	mux.HandleFunc("/api/events", h.events)
+	mux.HandleFunc("/api/events/nearby", h.eventsNearby)
 	mux.HandleFunc("/api/events/", h.eventSubroutes)
 
 	fs := http.FileServer(http.Dir("web"))
@@ -45,4 +46,3 @@ func NewHandler(cfg HandlerConfig) http.Handler {
 		withRateLimit(60, time.Minute),
 	)(mux)
 }
-

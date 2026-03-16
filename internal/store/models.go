@@ -11,39 +11,38 @@ const (
 )
 
 type User struct {
-	ID           string
-	Email        string
-	Role         Role
-	Salt         string
-	PasswordHash []byte
-	CreatedAt    time.Time
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Role      Role      `json:"role"`
+	Salt      string    `json:"-"`
+	PasswordHash []byte `json:"-"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type Event struct {
-	ID          string
-	Title       string
-	Description string
-	StartsAt    time.Time
-	EndsAt      time.Time
-	Lat         float64
-	Lng         float64
-	Address     string
-	CreatedBy   string
-	CreatedAt   time.Time
+	ID          string    `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	StartsAt    time.Time `json:"startsAt"`
+	EndsAt      time.Time `json:"endsAt"`
+	Lat         float64   `json:"lat"`
+	Lng         float64   `json:"lng"`
+	Address     string    `json:"address"`
+	CreatedBy   string    `json:"createdBy"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type Session struct {
-	ID        string
-	EventID   string
-	Title     string
-	StartsAt  time.Time
-	EndsAt    time.Time
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	EventID   string    `json:"eventId"`
+	Title     string    `json:"title"`
+	StartsAt  time.Time `json:"startsAt"`
+	EndsAt    time.Time `json:"endsAt"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type Participant struct {
-	UserID   string
-	EventID  string
-	JoinedAt time.Time
+	UserID   string    `json:"userId"`
+	EventID  string    `json:"eventId"`
+	JoinedAt time.Time `json:"joinedAt"`
 }
-

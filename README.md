@@ -14,6 +14,22 @@ mkdir -p /tmp/go-cache /tmp/go-modcache
 GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-modcache go run ./cmd/server
 ```
 
+### Fedora / GNAT toolchain note
+
+If you have GNAT installed and its `gcc` is ahead of `/usr/bin` in your `PATH`, `go run` (with cgo enabled) may try to link using GNAT's older binutils and fail with errors mentioning `.relr.dyn` and `-lresolv`.
+
+Fix by forcing the system toolchain:
+
+```bash
+GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-modcache CC=/usr/bin/gcc CXX=/usr/bin/g++ go run ./cmd/server
+```
+
+Or use the helper script:
+
+```bash
+bash scripts/run-server.sh
+```
+
 Open `http://localhost:8080`.
 
 ## Roles
@@ -39,4 +55,3 @@ export DEFAULT_ADMIN_PASSWORD=changeme
 - `POST /api/events/{id}/join`
 - `GET/POST /api/events/{id}/sessions`
 - `GET /api/events/{id}/participants`
-

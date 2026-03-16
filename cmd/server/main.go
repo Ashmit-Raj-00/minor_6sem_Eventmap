@@ -26,7 +26,7 @@ func main() {
 	memStore := store.NewMemory(store.MemoryConfig{
 		PasswordIterations: cfg.PasswordIterations,
 	})
-	store.SeedDefaultUsers(memStore, cfg)
+	store.SeedDefaultAdmin(memStore, cfg.DefaultAdminEmail, cfg.DefaultAdminPassword)
 
 	handler := api.NewHandler(api.HandlerConfig{
 		Config:   cfg,
@@ -66,4 +66,3 @@ func main() {
 		log.Printf("shutdown timed out")
 	}
 }
-

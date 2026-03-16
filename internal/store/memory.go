@@ -241,15 +241,6 @@ func (m *Memory) ListParticipants(eventID string) ([]Participant, error) {
 	return out, nil
 }
 
-func SeedDefaultUsers(m *Memory, cfg interface{ DefaultAdminEmail, DefaultAdminPassword string }) {
-	email := strings.TrimSpace(cfg.DefaultAdminEmail)
-	pass := strings.TrimSpace(cfg.DefaultAdminPassword)
-	if email == "" || pass == "" {
-		return
-	}
-	_, _ = m.CreateUser(email, pass, RoleAdmin)
-}
-
 func randomID(nbytes int) string {
 	b := make([]byte, nbytes)
 	_, _ = rand.Read(b)
@@ -281,4 +272,3 @@ func equalBytes(a, b []byte) bool {
 	}
 	return v == 0
 }
-

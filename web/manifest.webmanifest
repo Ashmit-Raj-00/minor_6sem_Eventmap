@@ -1,0 +1,16 @@
+{
+  "name": "EventMap",
+  "short_name": "EventMap",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1835",
+  "theme_color": "#5c94fc",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -31,6 +31,13 @@ function debounce(fn, ms) {
   };
 }
 
+function initPwa() {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
 function setMsg(el, text, kind) {
   el.textContent = text || "";
   el.classList.remove("ok", "error");
@@ -687,6 +694,7 @@ function initMobileUi() {
 }
 
 async function main() {
+  initPwa();
   initMap();
   initMobileUi();
 

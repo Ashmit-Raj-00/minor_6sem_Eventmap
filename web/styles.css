@@ -68,6 +68,7 @@ body {
   gap: 10px;
   align-items: center;
   min-width: 260px;
+  flex: 1 1 auto;
 }
 .brandMark {
   width: 34px;
@@ -98,7 +99,7 @@ body {
   padding: 10px 14px;
   background: rgba(255,255,255,0.14);
 }
-.userbar { display: flex; gap: 10px; align-items: center; min-width: 260px; justify-content: flex-end; }
+.userbar { display: flex; gap: 10px; align-items: center; min-width: 260px; justify-content: flex-end; flex: 0 1 auto; }
 .userChip {
   display: grid;
   gap: 2px;
@@ -335,6 +336,9 @@ textarea { resize: vertical; }
   .userbar { min-width: 0; }
   .topbar { padding: calc(10px + var(--safe-top)) 10px 10px; gap: 10px; }
   .topbar .brandName { font-size: 12px; }
+  .topbar > * { min-width: 0; }
+  .userChip { max-width: 100%; }
+  .userLine { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: min(62vw, 420px); }
   .topControls { display: none; width: 100%; }
   body.filtersOpen .topControls { display: grid; }
   .topControls .row { flex-direction: column; align-items: stretch; }
@@ -393,6 +397,9 @@ textarea { resize: vertical; }
   .map { height: calc(100dvh - 210px - var(--mobile-nav-h) - var(--safe-bottom)); min-height: 340px; }
   .toasts { bottom: calc(12px + var(--mobile-nav-h) + var(--safe-bottom)); right: 12px; left: 12px; }
   .toast { max-width: unset; }
+
+  /* Prevent Leaflet controls/attribution overlapping bottom nav */
+  .leaflet-bottom { bottom: calc(var(--mobile-nav-h) + var(--safe-bottom) + 8px) !important; }
 }
 
 @media (min-width: 901px) {

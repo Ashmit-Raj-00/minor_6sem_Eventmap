@@ -1,4 +1,4 @@
-const CACHE = "eventmap-static-v1";
+const CACHE = "eventmap-static-v2";
 
 const ASSETS = [
   "/",
@@ -32,12 +32,17 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
+  const url = new URL(req.url);
+  if (url.origin === self.location.origin) {
+    // Never cache API responses (avoid stale data and auth issues).
+    if (url.pathname.startsWith("/api/")) return;
+  }
+
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
       return fetch(req)
         .then((res) => {
-          const url = new URL(req.url);
           if (url.origin === self.location.origin && res.ok) {
             const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
@@ -48,4 +53,3 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
-

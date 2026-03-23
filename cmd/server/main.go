@@ -27,7 +27,7 @@ func main() {
 	memStore := store.NewMemory(store.MemoryConfig{
 		PasswordIterations: cfg.PasswordIterations,
 	})
-	store.SeedDefaultAdmin(memStore, cfg.DefaultAdminEmail, cfg.DefaultAdminPassword)
+	store.SeedDefaultAdmin(memStore, cfg.DefaultAdminUsername, cfg.DefaultAdminPassword)
 
 	handler := api.NewHandler(api.HandlerConfig{
 		Config:   cfg,

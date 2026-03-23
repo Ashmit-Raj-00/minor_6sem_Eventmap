@@ -81,11 +81,8 @@
           </div>
           <div class="card">
             <div id="authTitle" class="authTitle">LOGIN</div>
-            <div id="oauthWrap" class="row" style="margin-bottom:10px">
-              <button id="googleLoginBtn" class="btn">Continue with Google</button>
-            </div>
             <div class="grid2">
-              <label>Email <input id="authEmail" type="email" autocomplete="email" /></label>
+              <label>Username <input id="authUsername" type="text" autocomplete="username" /></label>
               <label>Password <input id="authPassword" type="password" autocomplete="current-password" /></label>
             </div>
             <div id="regExtras" class="grid2" hidden>
@@ -209,7 +206,6 @@
       crossorigin=""
     ></script>
     <script src="/config.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>

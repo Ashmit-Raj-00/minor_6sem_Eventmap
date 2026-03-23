@@ -35,11 +35,7 @@ func (h *handlers) configJS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body, _ := json.Marshal(map[string]any{
-		"apiBase":         "",
-		"publicOrigin":    h.cfg.PublicOrigin,
-		"authProvider":    strings.TrimSpace(strings.ToLower(h.cfg.AuthProvider)),
-		"supabaseUrl":     h.cfg.SupabaseURL,
-		"supabaseAnonKey": h.cfg.SupabaseAnonKey,
+		"apiBase": "",
 	})
 	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
@@ -52,7 +48,7 @@ func (h *handlers) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Email    string     `json:"email"`
+		Username string     `json:"username"`
 		Password string     `json:"password"`
 		Role     store.Role `json:"role"`
 	}
@@ -60,7 +56,7 @@ func (h *handlers) register(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "bad_json"})
 		return
 	}
-	u, err := h.st.CreateUser(req.Email, req.Password, req.Role)
+	u, err := h.st.CreateUser(req.Username, req.Password, req.Role)
 	if err != nil {
 		code := http.StatusBadRequest
 		if err == store.ErrAlreadyExists {
@@ -70,9 +66,9 @@ func (h *handlers) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"id":    u.ID,
-		"email": u.Email,
-		"role":  u.Role,
+		"id":       u.ID,
+		"username": u.Username,
+		"role":     u.Role,
 	})
 }
 
@@ -82,14 +78,14 @@ func (h *handlers) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Email    string `json:"email"`
+		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 	if err := readJSON(r, &req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "bad_json"})
 		return
 	}
-	u, err := h.st.VerifyPassword(req.Email, req.Password)
+	u, err := h.st.VerifyPassword(req.Username, req.Password)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "invalid_credentials"})
 		return
@@ -108,9 +104,9 @@ func (h *handlers) login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"token": token,
 		"user": map[string]any{
-			"id":    u.ID,
-			"email": u.Email,
-			"role":  u.Role,
+			"id":       u.ID,
+			"username": u.Username,
+			"role":     u.Role,
 		},
 	})
 }
@@ -128,9 +124,9 @@ func (h *handlers) me(w http.ResponseWriter, r *http.Request) {
 		}
 		points, level, nextLevelAt := h.st.UserScore(u.ID)
 		writeJSON(w, http.StatusOK, map[string]any{
-			"id":    u.ID,
-			"email": u.Email,
-			"role":  u.Role,
+			"id":       u.ID,
+			"username": u.Username,
+			"role":     u.Role,
 			"score": map[string]any{
 				"points":      points,
 				"level":       level,
@@ -429,7 +425,7 @@ func (h *handlers) hydrateScores(scores []store.Score) []map[string]any {
 		_, level, nextLevelAt := h.st.UserScore(s.UserID)
 		out = append(out, map[string]any{
 			"userId":      s.UserID,
-			"email":       u.Email,
+			"username":    u.Username,
 			"points":      s.Points,
 			"level":       level,
 			"nextLevelAt": nextLevelAt,

@@ -153,39 +153,6 @@ func clientIP(r *http.Request) string {
 }
 
 func withAuth(cfg config.Config, st *store.Memory) middleware {
-	admin := map[string]bool{}
-	for _, e := range cfg.AdminEmails {
-		admin[strings.TrimSpace(strings.ToLower(e))] = true
-	}
-	organizer := map[string]bool{}
-	for _, e := range cfg.OrganizerEmails {
-		organizer[strings.TrimSpace(strings.ToLower(e))] = true
-	}
-	roleForEmail := func(email string) store.Role {
-		email = strings.TrimSpace(strings.ToLower(email))
-		if email == "" {
-			return store.RoleAttendee
-		}
-		if admin[email] {
-			return store.RoleAdmin
-		}
-		if organizer[email] {
-			return store.RoleOrganizer
-		}
-		return store.RoleAttendee
-	}
-
-	tryVerify := func(secret []byte, token string, now time.Time) (auth.Claims, bool) {
-		if len(secret) == 0 {
-			return auth.Claims{}, false
-		}
-		claims, err := auth.VerifyHS256(secret, token, now)
-		if err != nil {
-			return auth.Claims{}, false
-		}
-		return claims, true
-	}
-
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h := r.Header.Get("Authorization")
@@ -201,38 +168,13 @@ func withAuth(cfg config.Config, st *store.Memory) middleware {
 			token := strings.TrimSpace(parts[1])
 			now := time.Now()
 
-			var (
-				claims auth.Claims
-				ok     bool
-			)
-			switch strings.TrimSpace(strings.ToLower(cfg.AuthProvider)) {
-			case "supabase":
-				claims, ok = tryVerify(cfg.SupabaseJWTSecret, token, now)
-			case "either":
-				claims, ok = tryVerify(cfg.SupabaseJWTSecret, token, now)
-				if !ok {
-					claims, ok = tryVerify(cfg.JWTSecret, token, now)
-				}
-			case "local", "":
-				claims, ok = tryVerify(cfg.JWTSecret, token, now)
-			default:
-				claims, ok = tryVerify(cfg.SupabaseJWTSecret, token, now)
-				if !ok {
-					claims, ok = tryVerify(cfg.JWTSecret, token, now)
-				}
-			}
-			if !ok {
+			claims, err := auth.VerifyHS256(cfg.JWTSecret, token, now)
+			if err != nil {
 				writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "invalid_token"})
 				return
 			}
 
-			var u store.User
-			var err error
-			if claims.Email != "" {
-				u, err = st.UpsertOAuthUser(claims.Sub, claims.Email, roleForEmail(claims.Email))
-			} else {
-				u, err = st.GetUserByID(claims.Sub)
-			}
+			u, err := st.GetUserByID(claims.Sub)
 			if err != nil {
 				writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "unknown_user"})
 				return

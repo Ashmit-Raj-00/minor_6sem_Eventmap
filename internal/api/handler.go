@@ -3,7 +3,6 @@ package api
 import (
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"eventmap/internal/async"
@@ -32,12 +31,8 @@ func NewHandler(cfg HandlerConfig) http.Handler {
 	mux.HandleFunc("/api/health", h.health)
 	mux.HandleFunc("/config.js", h.configJS)
 
-	authProvider := strings.TrimSpace(strings.ToLower(cfg.Config.AuthProvider))
-	localAuthEnabled := authProvider == "" || authProvider == "local" || authProvider == "either"
-	if localAuthEnabled {
-		mux.HandleFunc("/api/auth/register", h.register)
-		mux.HandleFunc("/api/auth/login", h.login)
-	}
+	mux.HandleFunc("/api/auth/register", h.register)
+	mux.HandleFunc("/api/auth/login", h.login)
 	mux.HandleFunc("/api/me", h.me)
 	mux.HandleFunc("/api/events", h.events)
 	mux.HandleFunc("/api/events/nearby", h.eventsNearby)

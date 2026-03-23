@@ -18,7 +18,6 @@ var (
 
 type Claims struct {
 	Sub   string `json:"sub"`
-	Email string `json:"email,omitempty"`
 	Role  string `json:"role"`
 	Iat   int64  `json:"iat"`
 	Exp   int64  `json:"exp"`

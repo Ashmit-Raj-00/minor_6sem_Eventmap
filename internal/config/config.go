@@ -69,18 +69,18 @@ func FromEnv() Config {
 	}
 
 	return Config{
-		Port:               port,
-		PublicOrigin:       publicOrigin,
-		JWTSecret:          jwtSecret,
-		TokenTTL:           tokenTTL,
-		PasswordIterations: passwordIterations,
-		AuthProvider:       authProvider,
-		SupabaseURL:        supabaseURL,
-		SupabaseAnonKey:    supabaseAnonKey,
-		SupabaseJWTSecret:  supabaseJWTSecret,
-		AdminEmails:        splitCSV(os.Getenv("ADMIN_EMAILS")),
-		OrganizerEmails:    splitCSV(os.Getenv("ORGANIZER_EMAILS")),
-		DefaultAdminEmail:  strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_EMAIL")),
+		Port:                 port,
+		PublicOrigin:         publicOrigin,
+		JWTSecret:            jwtSecret,
+		TokenTTL:             tokenTTL,
+		PasswordIterations:   passwordIterations,
+		AuthProvider:         authProvider,
+		SupabaseURL:          supabaseURL,
+		SupabaseAnonKey:      supabaseAnonKey,
+		SupabaseJWTSecret:    supabaseJWTSecret,
+		AdminEmails:          splitCSV(os.Getenv("ADMIN_EMAILS")),
+		OrganizerEmails:      splitCSV(os.Getenv("ORGANIZER_EMAILS")),
+		DefaultAdminEmail:    strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_EMAIL")),
 		DefaultAdminPassword: strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_PASSWORD")),
 	}
 }

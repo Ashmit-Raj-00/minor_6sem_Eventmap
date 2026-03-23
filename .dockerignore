@@ -1,0 +1,7 @@
+.git
+.github
+**/*.log
+**/*.tmp
+**/.DS_Store
+main.txt
+

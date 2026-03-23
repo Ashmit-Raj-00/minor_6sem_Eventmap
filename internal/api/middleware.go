@@ -93,9 +93,9 @@ func withCORS(origin string) middleware {
 }
 
 type limiter struct {
-	mu    sync.Mutex
-	hits  map[string][]time.Time
-	limit int
+	mu     sync.Mutex
+	hits   map[string][]time.Time
+	limit  int
 	window time.Duration
 }
 

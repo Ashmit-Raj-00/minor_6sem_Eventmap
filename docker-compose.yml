@@ -6,10 +6,6 @@ services:
     environment:
       PORT: 8080
       PUBLIC_ORIGIN: http://localhost:8080
-      AUTH_PROVIDER: supabase
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
-      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
-      ORGANIZER_EMAILS: ${ORGANIZER_EMAILS:-}
-
+      # Optional: seed an initial admin user (username/password)
+      DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}

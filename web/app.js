@@ -1,35 +1,13 @@
 const CFG = (globalThis && globalThis.__EVENTMAP_CONFIG__) || {};
 const API = CFG.apiBase || "";
 const tokenKey = "eventmap_token";
-const emailKey = "eventmap_last_email";
+const usernameKey = "eventmap_last_username";
 const viewKey = "eventmap_view";
 const mapStateKey = "eventmap_map_state_v1";
 
 let token = localStorage.getItem(tokenKey) || "";
 let me = null;
 let authMode = "login"; // login | register
-
-const supabaseLib = globalThis && globalThis.supabase;
-const supabaseEnabled = Boolean(CFG.supabaseUrl && CFG.supabaseAnonKey && supabaseLib && typeof supabaseLib.createClient === "function");
-const sb = supabaseEnabled ? supabaseLib.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
-
-function explainSupabaseNotConfigured() {
-  const problems = [];
-  if (!CFG.supabaseUrl) problems.push("SUPABASE_URL missing");
-  if (!CFG.supabaseAnonKey) problems.push("SUPABASE_ANON_KEY missing");
-  if (!supabaseLib) problems.push("Supabase JS not loaded");
-  const hint = problems.length ? problems.join(", ") : "Unknown reason";
-
-  const msg = $("authMsg");
-  if (msg) {
-    setMsg(
-      msg,
-      `Supabase not configured (${hint}). If you're on Netlify: set SUPABASE_URL + SUPABASE_ANON_KEY env vars and redeploy, then open /config.js to verify.`,
-      "error"
-    );
-  }
-  console.error("Supabase not configured", { cfg: CFG, hasSupabaseLib: Boolean(supabaseLib) });
-}
 
 let map = null;
 let myMarker = null;
@@ -67,60 +45,6 @@ function toast(text, kind = "") {
   el.textContent = text;
   wrap.appendChild(el);
   setTimeout(() => el.remove(), 3200);
-}
-
-async function initSupabaseAuth() {
-  if (!sb) return;
-
-  // Prefer OAuth UI when Supabase is configured
-  const authModeLogin = $("authModeLogin");
-  const authModeRegister = $("authModeRegister");
-  const authSubmitBtn = $("authSubmitBtn");
-  const regExtras = $("regExtras");
-
-  if (authModeLogin) authModeLogin.hidden = true;
-  if (authModeRegister) authModeRegister.hidden = true;
-  if (authSubmitBtn) authSubmitBtn.hidden = true;
-  if (regExtras) regExtras.hidden = true;
-
-  const emailEl = $("authEmail");
-  const passEl = $("authPassword");
-  if (emailEl) emailEl.closest("label")?.classList.add("muted");
-  if (passEl) passEl.closest("label")?.classList.add("muted");
-  if (emailEl) emailEl.disabled = true;
-  if (passEl) passEl.disabled = true;
-
-  const { data } = await sb.auth.getSession();
-  token = data?.session?.access_token || "";
-  if (token) localStorage.setItem(tokenKey, token);
-  else localStorage.removeItem(tokenKey);
-
-  sb.auth.onAuthStateChange(async (_event, session) => {
-    token = session?.access_token || "";
-    if (token) localStorage.setItem(tokenKey, token);
-    else localStorage.removeItem(tokenKey);
-    await refreshMe();
-    await refreshLeaderboards().catch(() => {});
-  });
-}
-
-async function onGoogleLogin() {
-  const msg = $("authMsg");
-  setMsg(msg, "", "");
-  if (!sb) {
-    explainSupabaseNotConfigured();
-    return;
-  }
-  try {
-    await sb.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-  } catch (err) {
-    const text = err?.message || "Login failed";
-    setMsg(msg, text, "error");
-    toast(text, "error");
-  }
 }
 
 async function api(path, opts = {}) {
@@ -266,7 +190,7 @@ function renderUser() {
     lbRefreshBtn.disabled = true;
     return;
   }
-  who.textContent = `${me.email} (${me.role})`;
+  who.textContent = `${me.username} (${me.role})`;
   logoutBtn.hidden = false;
   createWrap.hidden = !(me.role === "organizer" || me.role === "admin");
   lbRefreshBtn.disabled = false;
@@ -411,16 +335,16 @@ function setAuthMode(mode) {
 async function onAuthSubmit() {
   const msg = $("authMsg");
   setMsg(msg, "", "");
-  const email = $("authEmail").value;
+  const username = $("authUsername").value;
   const password = $("authPassword").value;
-  localStorage.setItem(emailKey, email || "");
+  localStorage.setItem(usernameKey, username || "");
 
   try {
     if (authMode === "register") {
       await api("/api/auth/register", {
         method: "POST",
         body: JSON.stringify({
-          email,
+          username,
           password,
           role: $("authRole").value,
         }),
@@ -428,7 +352,7 @@ async function onAuthSubmit() {
     }
     const data = await api("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
     });
     token = data.token;
     localStorage.setItem(tokenKey, token);
@@ -444,9 +368,6 @@ async function onAuthSubmit() {
 }
 
 function onGuest() {
-  if (sb) {
-    sb.auth.signOut().catch(() => {});
-  }
   token = "";
   localStorage.removeItem(tokenKey);
   me = null;
@@ -504,9 +425,6 @@ async function onCreateEvent() {
 }
 
 async function onLogout() {
-  if (sb) {
-    await sb.auth.signOut().catch(() => {});
-  }
   token = "";
   localStorage.removeItem(tokenKey);
   me = null;
@@ -704,7 +622,7 @@ function renderLeaderboards(entries, el, emptyText) {
     rank.textContent = String(idx + 1);
     const name = document.createElement("div");
     name.className = "lbName";
-    name.textContent = e.email || e.userId;
+    name.textContent = e.username || e.userId;
     left.appendChild(rank);
     left.appendChild(name);
 
@@ -772,24 +690,12 @@ async function main() {
   initMap();
   initMobileUi();
 
-  const googleBtn = $("googleLoginBtn");
-  if (googleBtn) googleBtn.onclick = onGoogleLogin;
-  if (!CFG.supabaseUrl || !CFG.supabaseAnonKey) {
-    const oauthWrap = $("oauthWrap");
-    if (oauthWrap) oauthWrap.hidden = true;
-  }
-
   const guestBtn = $("authGuestBtn");
   if (guestBtn) guestBtn.onclick = onGuest;
 
-  if (!sb) {
-    $("authModeLogin").onclick = () => setAuthMode("login");
-    $("authModeRegister").onclick = () => setAuthMode("register");
-    $("authSubmitBtn").onclick = onAuthSubmit;
-  } else {
-    const authTitle = $("authTitle");
-    if (authTitle) authTitle.textContent = "LOGIN WITH GOOGLE";
-  }
+  $("authModeLogin").onclick = () => setAuthMode("login");
+  $("authModeRegister").onclick = () => setAuthMode("register");
+  $("authSubmitBtn").onclick = onAuthSubmit;
 
   $("logoutBtn").onclick = () => onLogout();
   $("createEventBtn").onclick = onCreateEvent;
@@ -815,19 +721,16 @@ async function main() {
   $("eventTagInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") $("eventTagBtn").click();
   });
-  if (!sb) {
-    $("authEmail").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") $("authSubmitBtn").click();
-    });
-    $("authPassword").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") $("authSubmitBtn").click();
-    });
+  $("authUsername").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("authSubmitBtn").click();
+  });
+  $("authPassword").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("authSubmitBtn").click();
+  });
 
-    $("authEmail").value = localStorage.getItem(emailKey) || "";
-    setAuthMode("login");
-  }
+  $("authUsername").value = localStorage.getItem(usernameKey) || "";
+  setAuthMode("login");
 
-  await initSupabaseAuth();
   await loadMe();
   await refreshEvents();
   await refreshLeaderboards().catch(() => {});

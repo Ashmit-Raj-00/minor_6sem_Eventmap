@@ -5,6 +5,3 @@
 [build.environment]
   # These are read by scripts/netlify-build.sh to generate web/config.js
   EVENTMAP_API_BASE = ""
-  SUPABASE_URL = ""
-  SUPABASE_ANON_KEY = ""
-

@@ -2,7 +2,4 @@
 // For local Go server runs, `/config.js` is served dynamically.
 window.__EVENTMAP_CONFIG__ = {
   apiBase: "",
-  supabaseUrl: "",
-  supabaseAnonKey: "",
 };
-

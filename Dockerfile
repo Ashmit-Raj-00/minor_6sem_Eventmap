@@ -7,6 +7,7 @@ COPY cmd ./cmd
 COPY internal ./internal
 COPY web ./web
 
+ENV CGO_ENABLED=0
 RUN go build -trimpath -ldflags="-s -w" -o /out/eventmap ./cmd/server
 
 FROM alpine:3.20
@@ -20,4 +21,3 @@ ENV PORT=8080
 EXPOSE 8080
 
 CMD ["/app/eventmap"]
-

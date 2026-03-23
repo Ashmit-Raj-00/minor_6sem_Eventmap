@@ -63,6 +63,25 @@ func (m *Memory) CreateUser(username, password string, role Role) (User, error) 
 	if key == "" || password == "" {
 		return User{}, errors.New("username and password required")
 	}
+	if len(username) < 3 || len(username) > 32 {
+		return User{}, errors.New("username must be 3-32 chars")
+	}
+	if len(password) < 6 || len(password) > 72 {
+		return User{}, errors.New("password must be 6-72 chars")
+	}
+	for _, r := range username {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= 'A' && r <= 'Z':
+		case r >= '0' && r <= '9':
+		case r == '_' || r == '-' || r == '.':
+		default:
+			return User{}, errors.New("username may only contain letters, numbers, _ . -")
+		}
+	}
+	if role == "" {
+		role = RoleAttendee
+	}
 	if role != RoleAdmin && role != RoleOrganizer && role != RoleAttendee {
 		return User{}, errors.New("invalid role")
 	}

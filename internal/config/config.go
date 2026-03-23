@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +45,9 @@ func FromEnv() Config {
 	csvDir := strings.TrimSpace(os.Getenv("CSV_DB_DIR"))
 	if csvDir == "" {
 		csvDir = "data"
+		if err := os.MkdirAll(csvDir, 0o755); err != nil {
+			csvDir = filepath.Join(os.TempDir(), "eventmap-data")
+		}
 	}
 
 	defaultAdminUsername := strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_USERNAME"))

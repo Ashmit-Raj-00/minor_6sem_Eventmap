@@ -11,7 +11,7 @@ Event management web app with a map UI:
 
 ```bash
 mkdir -p /tmp/go-cache /tmp/go-modcache
-GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-modcache go run ./cmd/server
+CGO_ENABLED=0 GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-modcache go run ./cmd/server
 ```
 
 ## CSV “Database” (local persistence)

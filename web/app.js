@@ -11,6 +11,24 @@ const supabaseLib = globalThis && globalThis.supabase;
 const supabaseEnabled = Boolean(CFG.supabaseUrl && CFG.supabaseAnonKey && supabaseLib && typeof supabaseLib.createClient === "function");
 const sb = supabaseEnabled ? supabaseLib.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
 
+function explainSupabaseNotConfigured() {
+  const problems = [];
+  if (!CFG.supabaseUrl) problems.push("SUPABASE_URL missing");
+  if (!CFG.supabaseAnonKey) problems.push("SUPABASE_ANON_KEY missing");
+  if (!supabaseLib) problems.push("Supabase JS not loaded");
+  const hint = problems.length ? problems.join(", ") : "Unknown reason";
+
+  const msg = $("authMsg");
+  if (msg) {
+    setMsg(
+      msg,
+      `Supabase not configured (${hint}). If you're on Netlify: set SUPABASE_URL + SUPABASE_ANON_KEY env vars and redeploy, then open /config.js to verify.`,
+      "error"
+    );
+  }
+  console.error("Supabase not configured", { cfg: CFG, hasSupabaseLib: Boolean(supabaseLib) });
+}
+
 let map = null;
 let myMarker = null;
 let pinMarker = null;
@@ -79,7 +97,7 @@ async function onGoogleLogin() {
   const msg = $("authMsg");
   setMsg(msg, "", "");
   if (!sb) {
-    setMsg(msg, "Supabase not configured.", "error");
+    explainSupabaseNotConfigured();
     return;
   }
   try {
@@ -666,7 +684,7 @@ async function main() {
 
   const googleBtn = $("googleLoginBtn");
   if (googleBtn) googleBtn.onclick = onGoogleLogin;
-  if (!sb) {
+  if (!CFG.supabaseUrl || !CFG.supabaseAnonKey) {
     const oauthWrap = $("oauthWrap");
     if (oauthWrap) oauthWrap.hidden = true;
   }

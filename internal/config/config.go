@@ -17,6 +17,8 @@ type Config struct {
 	TokenTTL           time.Duration
 	PasswordIterations int
 
+	CSVDBDir string
+
 	DefaultAdminUsername string
 	DefaultAdminPassword string
 }
@@ -39,6 +41,10 @@ func FromEnv() Config {
 
 	tokenTTL := envDuration("TOKEN_TTL", 12*time.Hour)
 	passwordIterations := envInt("PASSWORD_ITERATIONS", 120_000)
+	csvDir := strings.TrimSpace(os.Getenv("CSV_DB_DIR"))
+	if csvDir == "" {
+		csvDir = "data"
+	}
 
 	defaultAdminUsername := strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_USERNAME"))
 	if defaultAdminUsername == "" {
@@ -51,6 +57,7 @@ func FromEnv() Config {
 		JWTSecret:            jwtSecret,
 		TokenTTL:             tokenTTL,
 		PasswordIterations:   passwordIterations,
+		CSVDBDir:             csvDir,
 		DefaultAdminUsername: defaultAdminUsername,
 		DefaultAdminPassword: strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_PASSWORD")),
 	}

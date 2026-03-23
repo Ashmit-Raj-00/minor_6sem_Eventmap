@@ -14,6 +14,7 @@ type HandlerConfig struct {
 	Config    config.Config
 	Store     *store.Memory
 	JobRunner *async.Runner
+	Persist   func() error
 }
 
 func NewHandler(cfg HandlerConfig) http.Handler {
@@ -26,6 +27,9 @@ func NewHandler(cfg HandlerConfig) http.Handler {
 		cfg:  cfg.Config,
 		st:   cfg.Store,
 		jobs: cfg.JobRunner,
+	}
+	if cfg.Persist != nil {
+		h.persist = cfg.Persist
 	}
 
 	mux.HandleFunc("/api/health", h.health)

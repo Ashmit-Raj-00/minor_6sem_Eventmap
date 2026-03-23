@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,12 +27,26 @@ func main() {
 	memStore := store.NewMemory(store.MemoryConfig{
 		PasswordIterations: cfg.PasswordIterations,
 	})
+
+	if err := store.LoadFromCSV(memStore, cfg.CSVDBDir); err != nil {
+		log.Printf("csvdb load failed: %v", err)
+	}
+
 	store.SeedDefaultAdmin(memStore, cfg.DefaultAdminUsername, cfg.DefaultAdminPassword)
+
+	var persistMu sync.Mutex
+	persist := func() error {
+		persistMu.Lock()
+		defer persistMu.Unlock()
+		return store.SaveToCSV(memStore, cfg.CSVDBDir)
+	}
+	_ = persist()
 
 	handler := api.NewHandler(api.HandlerConfig{
 		Config:    cfg,
 		Store:     memStore,
 		JobRunner: jobRunner,
+		Persist:   persist,
 	})
 
 	server := &http.Server{
@@ -64,5 +79,9 @@ func main() {
 		log.Printf("shutdown complete")
 	case <-time.After(12 * time.Second):
 		log.Printf("shutdown timed out")
+	}
+
+	if err := persist(); err != nil {
+		log.Printf("csvdb save failed: %v", err)
 	}
 }

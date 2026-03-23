@@ -14,6 +14,16 @@ mkdir -p /tmp/go-cache /tmp/go-modcache
 GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-modcache go run ./cmd/server
 ```
 
+## CSV “Database” (local persistence)
+
+By default the server stores data in CSV files under `data/` (relative to where the server runs).
+
+Set a custom location:
+
+```bash
+export CSV_DB_DIR=./data
+```
+
 ### Fedora / GNAT toolchain note
 
 If you have GNAT installed and its `gcc` is ahead of `/usr/bin` in your `PATH`, `go run` (with cgo enabled) may try to link using GNAT's older binutils and fail with errors mentioning `.relr.dyn` and `-lresolv`.

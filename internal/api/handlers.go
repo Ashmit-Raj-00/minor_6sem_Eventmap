@@ -20,6 +20,7 @@ type handlers struct {
 		EnqueueNotification(kind string, payload map[string]any)
 		EnqueueAnalytics(event string, payload map[string]any)
 	}
+	persist func() error
 }
 
 func (h *handlers) health(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +65,9 @@ func (h *handlers) register(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, code, map[string]any{"error": err.Error()})
 		return
+	}
+	if h.persist != nil {
+		_ = h.persist()
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"id":       u.ID,
@@ -207,6 +211,9 @@ func (h *handlers) createEvent(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return
 	}
+	if h.persist != nil {
+		_ = h.persist()
+	}
 
 	h.jobs.EnqueueAnalytics("event_created", map[string]any{"event_id": e.ID, "user_id": u.ID})
 	h.jobs.EnqueueNotification("event_created", map[string]any{"event_id": e.ID})
@@ -282,6 +289,9 @@ func (h *handlers) eventSubroutes(w http.ResponseWriter, r *http.Request) {
 					writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 					return
 				}
+				if h.persist != nil {
+					_ = h.persist()
+				}
 				h.jobs.EnqueueAnalytics("session_created", map[string]any{"event_id": eventID, "session_id": s.ID})
 				writeJSON(w, http.StatusCreated, s)
 			})).ServeHTTP(w, r)
@@ -305,6 +315,9 @@ func (h *handlers) eventSubroutes(w http.ResponseWriter, r *http.Request) {
 				}
 				writeJSON(w, code, map[string]any{"error": err.Error()})
 				return
+			}
+			if h.persist != nil {
+				_ = h.persist()
 			}
 			h.jobs.EnqueueAnalytics("event_joined", map[string]any{"event_id": eventID, "user_id": u.ID})
 			h.jobs.EnqueueNotification("event_joined", map[string]any{"event_id": eventID, "user_id": u.ID})
@@ -350,6 +363,9 @@ func (h *handlers) eventSubroutes(w http.ResponseWriter, r *http.Request) {
 				writeJSON(w, code, map[string]any{"error": err.Error()})
 				return
 			}
+			if h.persist != nil {
+				_ = h.persist()
+			}
 			h.jobs.EnqueueAnalytics("event_tagged", map[string]any{"event_id": eventID, "user_id": u.ID, "tag": req.Tag})
 			writeJSON(w, http.StatusOK, e)
 		})).ServeHTTP(w, r)
@@ -380,6 +396,9 @@ func (h *handlers) eventSubroutes(w http.ResponseWriter, r *http.Request) {
 				}
 				writeJSON(w, code, map[string]any{"error": err.Error()})
 				return
+			}
+			if h.persist != nil {
+				_ = h.persist()
 			}
 			h.jobs.EnqueueAnalytics("event_checkin", map[string]any{"event_id": eventID, "user_id": u.ID})
 			writeJSON(w, http.StatusCreated, map[string]any{"checkedInAt": at.UTC().Format(time.RFC3339)})

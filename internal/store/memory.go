@@ -31,9 +31,13 @@ type Memory struct {
 	usersByID    map[string]User
 	usersByEmail map[string]string
 
-	eventsByID map[string]Event
-	sessions   map[string][]Session
+	eventsByID   map[string]Event
+	sessions     map[string][]Session
 	participants map[string]map[string]Participant // eventID -> userID -> participant
+
+	userPoints  map[string]int                  // userID -> points
+	eventPoints map[string]map[string]int       // eventID -> userID -> points earned for the event
+	checkins    map[string]map[string]time.Time // eventID -> userID -> checked in at
 }
 
 func NewMemory(cfg MemoryConfig) *Memory {
@@ -47,6 +51,9 @@ func NewMemory(cfg MemoryConfig) *Memory {
 		eventsByID:         map[string]Event{},
 		sessions:           map[string][]Session{},
 		participants:       map[string]map[string]Participant{},
+		userPoints:         map[string]int{},
+		eventPoints:        map[string]map[string]int{},
+		checkins:           map[string]map[string]time.Time{},
 	}
 }
 
@@ -123,12 +130,17 @@ func (m *Memory) CreateEvent(e Event) (Event, error) {
 	if e.CreatedBy == "" {
 		return Event{}, errors.New("created_by required")
 	}
+	e.Tags = normalizeTags(e.Tags)
+	if e.CheckinRadiusKm <= 0 {
+		e.CheckinRadiusKm = 0.2
+	}
 	e.ID = randomID(18)
 	e.CreatedAt = time.Now()
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.eventsByID[e.ID] = e
+	m.addPointsLocked(e.CreatedBy, e.ID, 50)
 	return e, nil
 }
 
@@ -223,6 +235,7 @@ func (m *Memory) JoinEvent(eventID, userID string) (Participant, error) {
 	}
 	p := Participant{EventID: eventID, UserID: userID, JoinedAt: time.Now()}
 	m.participants[eventID][userID] = p
+	m.addPointsLocked(userID, eventID, 10)
 	return p, nil
 }
 
@@ -239,6 +252,193 @@ func (m *Memory) ListParticipants(eventID string) ([]Participant, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].JoinedAt.Before(out[j].JoinedAt) })
 	return out, nil
+}
+
+func (m *Memory) TagEventNear(eventID, userID, tag string, lat, lng float64) (Event, error) {
+	if eventID == "" || userID == "" {
+		return Event{}, errors.New("event_id and user_id required")
+	}
+	if _, err := m.GetUserByID(userID); err != nil {
+		return Event{}, err
+	}
+	tag = normalizeTag(tag)
+	if tag == "" {
+		return Event{}, errors.New("tag required")
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	e, ok := m.eventsByID[eventID]
+	if !ok {
+		return Event{}, ErrNotFound
+	}
+	if geo.DistanceKm(lat, lng, e.Lat, e.Lng) > 0.75 {
+		return Event{}, ErrForbidden
+	}
+
+	for _, t := range e.Tags {
+		if t == tag {
+			return e, nil
+		}
+	}
+	e.Tags = append(e.Tags, tag)
+	sort.Strings(e.Tags)
+	m.eventsByID[eventID] = e
+	m.addPointsLocked(userID, eventID, 5)
+	return e, nil
+}
+
+func (m *Memory) CheckIn(eventID, userID string, lat, lng float64) (time.Time, error) {
+	if eventID == "" || userID == "" {
+		return time.Time{}, errors.New("event_id and user_id required")
+	}
+	if _, err := m.GetUserByID(userID); err != nil {
+		return time.Time{}, err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	e, ok := m.eventsByID[eventID]
+	if !ok {
+		return time.Time{}, ErrNotFound
+	}
+	r := e.CheckinRadiusKm
+	if r <= 0 {
+		r = 0.2
+	}
+	if geo.DistanceKm(lat, lng, e.Lat, e.Lng) > r {
+		return time.Time{}, ErrForbidden
+	}
+	if m.checkins[eventID] == nil {
+		m.checkins[eventID] = map[string]time.Time{}
+	}
+	if _, ok := m.checkins[eventID][userID]; ok {
+		return time.Time{}, ErrAlreadyExists
+	}
+	now := time.Now()
+	m.checkins[eventID][userID] = now
+	m.addPointsLocked(userID, eventID, 30)
+	return now, nil
+}
+
+func (m *Memory) UserScore(userID string) (points int, level int, nextLevelAt int) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	points = m.userPoints[userID]
+	level = scoreLevel(points)
+	nextLevelAt = level * 100
+	return points, level, nextLevelAt
+}
+
+func (m *Memory) Leaderboard(limit int) []Score {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make([]Score, 0, len(m.userPoints))
+	for userID, pts := range m.userPoints {
+		out = append(out, Score{UserID: userID, Points: pts})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Points == out[j].Points {
+			return out[i].UserID < out[j].UserID
+		}
+		return out[i].Points > out[j].Points
+	})
+	if limit <= 0 || limit > len(out) {
+		return out
+	}
+	return out[:limit]
+}
+
+func (m *Memory) EventLeaderboard(eventID string, limit int) ([]Score, error) {
+	if _, err := m.GetEvent(eventID); err != nil {
+		return nil, err
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	mm := m.eventPoints[eventID]
+	out := make([]Score, 0, len(mm))
+	for userID, pts := range mm {
+		out = append(out, Score{UserID: userID, Points: pts})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Points == out[j].Points {
+			return out[i].UserID < out[j].UserID
+		}
+		return out[i].Points > out[j].Points
+	})
+	if limit <= 0 || limit > len(out) {
+		return out, nil
+	}
+	return out[:limit], nil
+}
+
+func (m *Memory) addPointsLocked(userID, eventID string, points int) {
+	if userID == "" || points == 0 {
+		return
+	}
+	m.userPoints[userID] += points
+	if eventID != "" {
+		if m.eventPoints[eventID] == nil {
+			m.eventPoints[eventID] = map[string]int{}
+		}
+		m.eventPoints[eventID][userID] += points
+	}
+}
+
+func scoreLevel(points int) int {
+	if points < 0 {
+		return 1
+	}
+	return (points / 100) + 1
+}
+
+func normalizeTags(tags []string) []string {
+	if len(tags) == 0 {
+		return nil
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, len(tags))
+	for _, t := range tags {
+		n := normalizeTag(t)
+		if n == "" || seen[n] {
+			continue
+		}
+		seen[n] = true
+		out = append(out, n)
+	}
+	sort.Strings(out)
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func normalizeTag(tag string) string {
+	tag = strings.TrimSpace(strings.ToLower(tag))
+	if tag == "" {
+		return ""
+	}
+	tag = strings.ReplaceAll(tag, " ", "-")
+	if len(tag) > 24 {
+		tag = tag[:24]
+	}
+	var b strings.Builder
+	b.Grow(len(tag))
+	for _, r := range tag {
+		switch {
+		case r >= 'a' && r <= 'z':
+			b.WriteRune(r)
+		case r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '-' || r == '_' || r == '.':
+			b.WriteRune(r)
+		}
+	}
+	out := strings.Trim(b.String(), "-_.")
+	if out == "" {
+		return ""
+	}
+	return out
 }
 
 func randomID(nbytes int) string {

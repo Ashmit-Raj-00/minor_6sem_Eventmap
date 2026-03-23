@@ -53,5 +53,9 @@ export DEFAULT_ADMIN_PASSWORD=changeme
 - `GET /api/events/nearby?lat=..&lng=..&radius_km=..`
 - `POST /api/events`
 - `POST /api/events/{id}/join`
+- `POST /api/events/{id}/checkin` (location-gated)
+- `POST /api/events/{id}/tag` (location-gated)
 - `GET/POST /api/events/{id}/sessions`
 - `GET /api/events/{id}/participants`
+- `GET /api/leaderboard`
+- `GET /api/events/{id}/leaderboard`

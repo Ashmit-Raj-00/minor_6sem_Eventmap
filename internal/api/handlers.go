@@ -107,10 +107,17 @@ func (h *handlers) me(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
 			return
 		}
+		points, level, nextLevelAt := h.st.UserScore(u.ID)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"id":    u.ID,
 			"email": u.Email,
 			"role":  u.Role,
+			"score": map[string]any{
+				"points":      points,
+				"level":       level,
+				"nextLevelAt": nextLevelAt,
+				"toNextLevel": maxInt(0, nextLevelAt-points),
+			},
 		})
 	})).ServeHTTP(w, r)
 }
@@ -143,13 +150,15 @@ func (h *handlers) eventsNearby(w http.ResponseWriter, r *http.Request) {
 
 func (h *handlers) createEvent(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Title       string  `json:"title"`
-		Description string  `json:"description"`
-		StartsAt    string  `json:"starts_at"`
-		EndsAt      string  `json:"ends_at"`
-		Lat         float64 `json:"lat"`
-		Lng         float64 `json:"lng"`
-		Address     string  `json:"address"`
+		Title           string   `json:"title"`
+		Description     string   `json:"description"`
+		StartsAt        string   `json:"starts_at"`
+		EndsAt          string   `json:"ends_at"`
+		Lat             float64  `json:"lat"`
+		Lng             float64  `json:"lng"`
+		Address         string   `json:"address"`
+		Tags            []string `json:"tags"`
+		CheckinRadiusKm float64  `json:"checkin_radius_km"`
 	}
 	if err := readJSON(r, &req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "bad_json"})
@@ -168,14 +177,16 @@ func (h *handlers) createEvent(w http.ResponseWriter, r *http.Request) {
 
 	u := r.Context().Value(ctxKeyUser).(store.User)
 	e, err := h.st.CreateEvent(store.Event{
-		Title:       req.Title,
-		Description: req.Description,
-		StartsAt:    startsAt,
-		EndsAt:      endsAt,
-		Lat:         req.Lat,
-		Lng:         req.Lng,
-		Address:     req.Address,
-		CreatedBy:   u.ID,
+		Title:           req.Title,
+		Description:     req.Description,
+		StartsAt:        startsAt,
+		EndsAt:          endsAt,
+		Lat:             req.Lat,
+		Lng:             req.Lng,
+		Address:         req.Address,
+		Tags:            req.Tags,
+		CheckinRadiusKm: req.CheckinRadiusKm,
+		CreatedBy:       u.ID,
 	})
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
@@ -297,8 +308,132 @@ func (h *handlers) eventSubroutes(w http.ResponseWriter, r *http.Request) {
 			}
 			writeJSON(w, http.StatusOK, map[string]any{"participants": p})
 		})).ServeHTTP(w, r)
+	case "tag":
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		chain(withAuth(h.cfg, h.st), requireRoles(store.RoleAdmin, store.RoleOrganizer, store.RoleAttendee))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			u := r.Context().Value(ctxKeyUser).(store.User)
+			var req struct {
+				Tag string  `json:"tag"`
+				Lat float64 `json:"lat"`
+				Lng float64 `json:"lng"`
+			}
+			if err := readJSON(r, &req); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]any{"error": "bad_json"})
+				return
+			}
+			e, err := h.st.TagEventNear(eventID, u.ID, req.Tag, req.Lat, req.Lng)
+			if err != nil {
+				code := http.StatusBadRequest
+				if err == store.ErrNotFound {
+					code = http.StatusNotFound
+				} else if err == store.ErrForbidden {
+					code = http.StatusForbidden
+				}
+				writeJSON(w, code, map[string]any{"error": err.Error()})
+				return
+			}
+			h.jobs.EnqueueAnalytics("event_tagged", map[string]any{"event_id": eventID, "user_id": u.ID, "tag": req.Tag})
+			writeJSON(w, http.StatusOK, e)
+		})).ServeHTTP(w, r)
+	case "checkin":
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		chain(withAuth(h.cfg, h.st), requireRoles(store.RoleAdmin, store.RoleOrganizer, store.RoleAttendee))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			u := r.Context().Value(ctxKeyUser).(store.User)
+			var req struct {
+				Lat float64 `json:"lat"`
+				Lng float64 `json:"lng"`
+			}
+			if err := readJSON(r, &req); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]any{"error": "bad_json"})
+				return
+			}
+			at, err := h.st.CheckIn(eventID, u.ID, req.Lat, req.Lng)
+			if err != nil {
+				code := http.StatusBadRequest
+				if err == store.ErrAlreadyExists {
+					code = http.StatusConflict
+				} else if err == store.ErrNotFound {
+					code = http.StatusNotFound
+				} else if err == store.ErrForbidden {
+					code = http.StatusForbidden
+				}
+				writeJSON(w, code, map[string]any{"error": err.Error()})
+				return
+			}
+			h.jobs.EnqueueAnalytics("event_checkin", map[string]any{"event_id": eventID, "user_id": u.ID})
+			writeJSON(w, http.StatusCreated, map[string]any{"checkedInAt": at.UTC().Format(time.RFC3339)})
+		})).ServeHTTP(w, r)
+	case "leaderboard":
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		chain(withAuth(h.cfg, h.st), requireRoles(store.RoleAdmin, store.RoleOrganizer, store.RoleAttendee))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			limit := queryInt(r, "limit", 20)
+			scores, err := h.st.EventLeaderboard(eventID, limit)
+			if err != nil {
+				writeJSON(w, http.StatusNotFound, map[string]any{"error": "not_found"})
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"leaderboard": h.hydrateScores(scores)})
+		})).ServeHTTP(w, r)
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
 }
 
+func (h *handlers) leaderboard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	chain(withAuth(h.cfg, h.st), requireRoles(store.RoleAdmin, store.RoleOrganizer, store.RoleAttendee))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limit := queryInt(r, "limit", 20)
+		scores := h.st.Leaderboard(limit)
+		writeJSON(w, http.StatusOK, map[string]any{"leaderboard": h.hydrateScores(scores)})
+	})).ServeHTTP(w, r)
+}
+
+func (h *handlers) hydrateScores(scores []store.Score) []map[string]any {
+	out := make([]map[string]any, 0, len(scores))
+	for _, s := range scores {
+		u, err := h.st.GetUserByID(s.UserID)
+		if err != nil {
+			continue
+		}
+		_, level, nextLevelAt := h.st.UserScore(s.UserID)
+		out = append(out, map[string]any{
+			"userId":      s.UserID,
+			"email":       u.Email,
+			"points":      s.Points,
+			"level":       level,
+			"nextLevelAt": nextLevelAt,
+		})
+	}
+	return out
+}
+
+func queryInt(r *http.Request, key string, def int) int {
+	v := strings.TrimSpace(r.URL.Query().Get(key))
+	if v == "" {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return def
+	}
+	return n
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}

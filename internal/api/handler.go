@@ -23,8 +23,8 @@ func NewHandler(cfg HandlerConfig) http.Handler {
 
 	mux := http.NewServeMux()
 	h := &handlers{
-		cfg: cfg.Config,
-		st:  cfg.Store,
+		cfg:  cfg.Config,
+		st:   cfg.Store,
 		jobs: cfg.JobRunner,
 	}
 
@@ -35,6 +35,7 @@ func NewHandler(cfg HandlerConfig) http.Handler {
 	mux.HandleFunc("/api/events", h.events)
 	mux.HandleFunc("/api/events/nearby", h.eventsNearby)
 	mux.HandleFunc("/api/events/", h.eventSubroutes)
+	mux.HandleFunc("/api/leaderboard", h.leaderboard)
 
 	fs := http.FileServer(http.Dir("web"))
 	mux.Handle("/", fs)

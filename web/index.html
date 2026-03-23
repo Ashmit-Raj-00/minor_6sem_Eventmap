@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>EventMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
     <link
       rel="stylesheet"
@@ -14,83 +20,177 @@
   </head>
   <body>
     <header class="topbar">
-      <div class="brand">EventMap</div>
+      <div class="brand">
+        <div class="brandMark"></div>
+        <div>
+          <div class="brandName">EventMap</div>
+          <div class="brandTag muted">WORLD 1-1 • Explore → Tag → Check-in → Level up</div>
+        </div>
+      </div>
+
+      <div class="topControls">
+        <div class="search">
+          <input id="searchInput" type="search" placeholder="Search events, tags, places…" />
+        </div>
+        <div class="row">
+          <label class="inline">
+            Tag
+            <input id="tagFilter" type="text" placeholder="e.g. music" />
+          </label>
+          <label class="inline">
+            Radius (km)
+            <input id="radiusKm" type="number" min="0" step="0.5" value="10" />
+          </label>
+          <button id="locateBtn" class="btn btn-quiet">Locate</button>
+          <button id="refreshBtn" class="btn btn-quiet">Refresh</button>
+        </div>
+      </div>
+
       <div class="userbar">
-        <span id="whoami" class="muted">Not signed in</span>
+        <div class="userChip">
+          <div id="whoami" class="userLine">Not signed in</div>
+          <div id="scoreLine" class="muted small">Sign in to earn XP</div>
+        </div>
         <button id="logoutBtn" class="btn btn-quiet" hidden>Logout</button>
       </div>
     </header>
 
-    <main class="layout">
-      <section class="panel">
-        <h2>Auth</h2>
-        <div class="grid2">
-          <div class="card">
-            <h3>Login</h3>
-            <label>Email <input id="loginEmail" type="email" autocomplete="email" /></label>
-            <label>Password <input id="loginPassword" type="password" autocomplete="current-password" /></label>
-            <button id="loginBtn" class="btn">Login</button>
+    <main class="shell">
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panelHeader">
+            <h2>Profile</h2>
+            <span id="levelPill" class="pill small" hidden>Level —</span>
           </div>
-          <div class="card">
-            <h3>Register</h3>
-            <label>Email <input id="regEmail" type="email" autocomplete="email" /></label>
-            <label>Password <input id="regPassword" type="password" autocomplete="new-password" /></label>
-            <label>
-              Role
-              <select id="regRole">
-                <option value="attendee">attendee</option>
-                <option value="organizer">organizer</option>
-              </select>
-            </label>
-            <button id="registerBtn" class="btn btn-secondary">Create account</button>
+          <div class="xp">
+            <div id="xpFill" class="xpFill" style="width: 0%"></div>
           </div>
-        </div>
-        <div id="authMsg" class="msg"></div>
-      </section>
+          <div id="xpText" class="muted small">0 / 100 XP</div>
+          <div class="hint muted">Quests: join (+10), tag near event (+5), check-in (+30), create (+50).</div>
+        </section>
 
-      <section class="panel">
-        <div class="panelHeader">
-          <h2>Map</h2>
-          <div class="row">
-            <button id="locateBtn" class="btn btn-quiet">Use my location</button>
-            <label class="inline">
-              Radius (km)
-              <input id="radiusKm" type="number" min="0" step="0.5" value="10" />
-            </label>
-            <button id="refreshBtn" class="btn btn-quiet">Refresh</button>
-          </div>
-        </div>
-        <div id="map" class="map"></div>
-        <div class="hint muted">
-          Tip: click on the map to set the event location before creating an event.
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Events</h2>
-
-        <div id="createWrap" class="card" hidden>
-          <h3>Create Event (organizer/admin)</h3>
-          <label>Title <input id="evTitle" type="text" /></label>
-          <label>Description <textarea id="evDesc" rows="3"></textarea></label>
-          <div class="grid2">
-            <label>Starts <input id="evStart" type="datetime-local" /></label>
-            <label>Ends <input id="evEnd" type="datetime-local" /></label>
-          </div>
-          <label>Address <input id="evAddress" type="text" placeholder="(optional)" /></label>
-          <div class="row">
-            <div class="pill">
-              <span class="muted">Pinned:</span>
-              <span id="pinnedLatLng" class="mono">—</span>
+        <section class="panel">
+          <div class="panelHeader">
+            <h2>Start</h2>
+            <div class="row">
+              <button id="authModeLogin" class="btn btn-quiet smallBtn">Login</button>
+              <button id="authModeRegister" class="btn btn-quiet smallBtn">Register</button>
             </div>
-            <button id="createEventBtn" class="btn">Create</button>
           </div>
-          <div id="createMsg" class="msg"></div>
-        </div>
+          <div class="card">
+            <div id="authTitle" class="authTitle">LOGIN</div>
+            <div class="grid2">
+              <label>Email <input id="authEmail" type="email" autocomplete="email" /></label>
+              <label>Password <input id="authPassword" type="password" autocomplete="current-password" /></label>
+            </div>
+            <div id="regExtras" class="grid2" hidden>
+              <label>
+                Role
+                <select id="authRole">
+                  <option value="attendee">attendee</option>
+                  <option value="organizer">organizer</option>
+                </select>
+              </label>
+              <label class="muted small">
+                Tip
+                <span class="small">Organizer can create events.</span>
+              </label>
+            </div>
+            <div class="row">
+              <button id="authSubmitBtn" class="btn">Start!</button>
+              <button id="authGuestBtn" class="btn btn-secondary">Browse as guest</button>
+            </div>
+            <div id="authMsg" class="msg"></div>
+          </div>
+        </section>
 
-        <div id="eventsList" class="list"></div>
+        <section id="createWrap" class="panel" hidden>
+          <h2>Create</h2>
+          <div class="card">
+            <h3>New Event (organizer/admin)</h3>
+            <label>Title <input id="evTitle" type="text" /></label>
+            <label>Description <textarea id="evDesc" rows="3"></textarea></label>
+            <div class="grid2">
+              <label>Starts <input id="evStart" type="datetime-local" /></label>
+              <label>Ends <input id="evEnd" type="datetime-local" /></label>
+            </div>
+            <label>Tags (comma separated) <input id="evTags" type="text" placeholder="music, food, meetup" /></label>
+            <div class="grid2">
+              <label>Check-in radius (km) <input id="evCheckinRadiusKm" type="number" min="0.05" step="0.05" value="0.2" /></label>
+              <label>Address <input id="evAddress" type="text" placeholder="(optional)" /></label>
+            </div>
+            <div class="row">
+              <div class="pill">
+                <span class="muted">Pinned:</span>
+                <span id="pinnedLatLng" class="mono">—</span>
+              </div>
+              <button id="createEventBtn" class="btn">Create</button>
+            </div>
+            <div id="createMsg" class="msg"></div>
+          </div>
+          <div class="hint muted">Tip: click the map to pin the event location.</div>
+        </section>
+
+        <section class="panel">
+          <div class="panelHeader">
+            <h2>Leaderboards</h2>
+            <button id="lbRefreshBtn" class="btn btn-quiet smallBtn" disabled>Update</button>
+          </div>
+          <div class="card">
+            <h3>Global</h3>
+            <div id="globalLB" class="lbList muted small">Sign in to view.</div>
+          </div>
+          <div class="card">
+            <h3>Selected Event</h3>
+            <div id="eventLB" class="lbList muted small">Select an event.</div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="content">
+        <section class="panel mapPanel">
+          <div class="panelHeader">
+            <h2>Map</h2>
+            <div class="hint muted">Click to pin • Marker click selects event</div>
+          </div>
+          <div id="map" class="map"></div>
+        </section>
+
+        <section class="panel listPanel">
+          <div class="panelHeader">
+            <h2>Events</h2>
+            <div id="selectedHint" class="muted small">No event selected</div>
+          </div>
+          <div id="eventDetail" class="card">
+            <div class="eventDetailTop">
+              <div>
+                <div id="eventTitle" class="eventDetailTitle">Select an event</div>
+                <div id="eventSub" class="muted small">Tip: click a marker or an event card</div>
+              </div>
+              <div class="row">
+                <button id="eventFocusBtn" class="btn btn-quiet smallBtn" disabled>Focus</button>
+                <button id="eventJoinBtn" class="btn smallBtn" disabled>Join</button>
+                <button id="eventCheckinBtn" class="btn btn-secondary smallBtn" disabled>Check-in</button>
+              </div>
+            </div>
+            <div class="grid2">
+              <label>
+                Add tag (near event)
+                <input id="eventTagInput" type="text" placeholder="e.g. music" />
+              </label>
+              <div class="row" style="align-self:end">
+                <button id="eventTagBtn" class="btn btn-quiet smallBtn" disabled>Tag</button>
+                <span id="eventDistance" class="muted small">—</span>
+              </div>
+            </div>
+            <div id="eventTags" class="tags"></div>
+          </div>
+          <div id="eventsList" class="list"></div>
+        </section>
       </section>
     </main>
+
+    <div id="toasts" class="toasts"></div>
 
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -100,4 +200,3 @@
     <script src="app.js"></script>
   </body>
 </html>
-

@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -30,8 +29,8 @@ func main() {
 	store.SeedDefaultAdmin(memStore, cfg.DefaultAdminUsername, cfg.DefaultAdminPassword)
 
 	handler := api.NewHandler(api.HandlerConfig{
-		Config:   cfg,
-		Store:    memStore,
+		Config:    cfg,
+		Store:     memStore,
 		JobRunner: jobRunner,
 	})
 

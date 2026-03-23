@@ -17,10 +17,10 @@ var (
 )
 
 type Claims struct {
-	Sub   string `json:"sub"`
-	Role  string `json:"role"`
-	Iat   int64  `json:"iat"`
-	Exp   int64  `json:"exp"`
+	Sub  string `json:"sub"`
+	Role string `json:"role"`
+	Iat  int64  `json:"iat"`
+	Exp  int64  `json:"exp"`
 }
 
 func SignHS256(secret []byte, claims Claims) (string, error) {

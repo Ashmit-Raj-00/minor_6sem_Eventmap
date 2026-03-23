@@ -96,3 +96,26 @@ docker run --rm -p 8080:8080 \
   -e SUPABASE_JWT_SECRET="$SUPABASE_JWT_SECRET" \
   eventmap
 ```
+
+## Netlify (free frontend hosting)
+
+Netlify can host the static frontend in `web/`. The Go backend must be deployed separately (Render/Fly/Cloud Run/VPS), because this app is a stateful server (in-memory store) and is not a good fit for serverless functions.
+
+### Deploy frontend to Netlify
+
+1) In Netlify, create a new site from this repo.
+2) Keep defaults from `netlify.toml`:
+   - Publish directory: `web`
+   - Build command: `bash scripts/netlify-build.sh`
+3) In Netlify site settings → Environment variables, set:
+   - `EVENTMAP_API_BASE` = `https://YOUR_BACKEND_DOMAIN`
+   - `SUPABASE_URL` = `https://YOUR_PROJECT.supabase.co`
+   - `SUPABASE_ANON_KEY` = `YOUR_SUPABASE_ANON_KEY`
+
+### Deploy backend (anywhere that runs Docker)
+
+Deploy the container and set these env vars on the backend service:
+- `AUTH_PROVIDER=supabase`
+- `PUBLIC_ORIGIN=https://YOUR_NETLIFY_SITE.netlify.app`
+- `SUPABASE_JWT_SECRET=YOUR_SUPABASE_JWT_SECRET`
+- Optional: `ADMIN_EMAILS=you@gmail.com`, `ORGANIZER_EMAILS=...`

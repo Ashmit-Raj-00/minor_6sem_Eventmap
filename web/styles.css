@@ -9,22 +9,30 @@
   --border: rgba(255, 255, 255, 0.08);
   --accent: #ffcf55;
   --accent2: #7ef0c1;
+  --accent3: #a78bfa;
   --danger: #ff4f6a;
   --brick: #d65b3c;
   --brick2: #a7442c;
   --ground: #2c6b2f;
   --shadow: rgba(0,0,0,0.25);
+  --mobile-nav-h: 58px;
 }
 
 * { box-sizing: border-box; }
+*:focus-visible {
+  outline: 3px solid rgba(255,207,85,0.75);
+  outline-offset: 2px;
+}
 body {
   margin: 0;
   font-family: "Press Start 2P", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   color: var(--text);
   background:
-    radial-gradient(1200px 700px at 10% -10%, rgba(255,255,255,0.45), transparent 55%),
-    radial-gradient(900px 540px at 90% 5%, rgba(255,255,255,0.32), transparent 55%),
-    linear-gradient(180deg, var(--sky), #1a4aa8 58%, var(--bg));
+    radial-gradient(1100px 600px at 10% -10%, rgba(255,255,255,0.50), transparent 55%),
+    radial-gradient(900px 600px at 90% 0%, rgba(255,255,255,0.28), transparent 55%),
+    radial-gradient(900px 520px at 60% 110%, rgba(167,139,250,0.25), transparent 60%),
+    linear-gradient(180deg, var(--sky), #2a63d2 52%, #141a36 82%, var(--bg));
+  -webkit-tap-highlight-color: transparent;
 }
 
 .topbar {
@@ -34,6 +42,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 14px;
   padding: 14px 16px;
   border-bottom: 2px solid rgba(0,0,0,0.28);
@@ -133,6 +142,10 @@ input, textarea, select {
   padding: 10px 10px;
   outline: none;
 }
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(126,240,193,0.70);
+  box-shadow: 0 0 0 4px rgba(126,240,193,0.18);
+}
 textarea { resize: vertical; }
 
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -150,6 +163,7 @@ textarea { resize: vertical; }
 .btn:hover { filter: brightness(1.05); }
 .btn:active { transform: translateY(2px); box-shadow: 0 4px 0 rgba(0,0,0,0.22); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: 0 6px 0 rgba(0,0,0,0.16); }
+.btn:focus-visible { box-shadow: 0 0 0 4px rgba(255,207,85,0.22), 0 6px 0 rgba(0,0,0,0.22); }
 .btn-secondary {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.16), rgba(0,0,0,0.10)),
@@ -159,6 +173,9 @@ textarea { resize: vertical; }
   background: rgba(255,255,255,0.10);
 }
 .smallBtn { padding: 7px 10px; border-radius: 10px; font-size: 12px; }
+
+.mobileOnly { display: none; }
+.mobileNav { display: none; }
 
 .muted { color: var(--muted); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
@@ -190,6 +207,7 @@ textarea { resize: vertical; }
   display: grid;
   gap: 8px;
   border: 2px solid rgba(0,0,0,0.22);
+  border-left: 8px solid var(--event-color, rgba(255,207,85,0.65));
   border-radius: 12px;
   padding: 12px;
   background:
@@ -199,7 +217,7 @@ textarea { resize: vertical; }
   cursor: pointer;
 }
 .eventRow:hover { transform: translateY(-1px); filter: brightness(1.04); }
-.eventRow.selected { border-color: rgba(255,207,85,0.65); }
+.eventRow.selected { border-color: rgba(255,207,85,0.65); filter: brightness(1.03); }
 .eventTitle { font-weight: 800; }
 .eventMeta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
 .eventActions { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -211,7 +229,9 @@ textarea { resize: vertical; }
   border: 2px solid rgba(0,0,0,0.22);
   background: rgba(255,255,255,0.10);
   font-size: 12px;
+  user-select: none;
 }
+.tagChip:hover { filter: brightness(1.06); }
 
 .xp {
   height: 10px;
@@ -279,4 +299,66 @@ textarea { resize: vertical; }
 
 @media (prefers-reduced-motion: reduce) {
   .btn, .eventRow { transition: none; }
+}
+
+/* Mobile layout: single-screen views + bottom navigation */
+@media (max-width: 900px) {
+  .mobileOnly { display: inline-flex; }
+  .shell { padding-bottom: calc(14px + var(--mobile-nav-h)); }
+  .brand { min-width: 0; }
+  .userbar { min-width: 0; }
+  .topControls { display: none; width: 100%; }
+  body.filtersOpen .topControls { display: grid; }
+  .topControls .row { flex-direction: column; align-items: stretch; }
+  label.inline { flex-direction: column; align-items: stretch; gap: 6px; }
+
+  .mobileNav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--mobile-nav-h);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+    border-top: 2px solid rgba(0,0,0,0.28);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.14), rgba(0,0,0,0.08)),
+      rgba(18, 28, 52, 0.84);
+    backdrop-filter: blur(10px);
+    z-index: 40;
+  }
+  .navBtn {
+    border: 2px solid rgba(0,0,0,0.24);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.92);
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.18);
+    transform: translateY(0);
+  }
+  .navBtn:active { transform: translateY(2px); box-shadow: 0 4px 0 rgba(0,0,0,0.18); }
+  .navBtn[aria-current="page"] {
+    border-color: rgba(255,207,85,0.6);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.16), rgba(0,0,0,0.10)),
+      linear-gradient(135deg, rgba(126,240,193,0.9), rgba(167,139,250,0.85));
+  }
+
+  body[data-view="map"] .listPanel { display: none; }
+  body[data-view="map"] .sidebar { display: none; }
+  body[data-view="events"] .mapPanel { display: none; }
+  body[data-view="events"] .sidebar { display: none; }
+  body[data-view="profile"] .content { display: none; }
+  body[data-view="profile"] .sidebar { display: grid; }
+
+  .map { height: calc(100dvh - 230px); min-height: 320px; }
+  .toasts { bottom: calc(14px + var(--mobile-nav-h)); right: 12px; left: 12px; }
+  .toast { max-width: unset; }
+}
+
+@media (min-width: 901px) {
+  .mobileNav { display: none; }
 }

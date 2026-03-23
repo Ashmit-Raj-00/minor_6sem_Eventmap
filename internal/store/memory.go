@@ -28,8 +28,8 @@ type Memory struct {
 
 	passwordIterations int
 
-	usersByID    map[string]User
-	usersByEmail map[string]string
+	usersByID       map[string]User
+	usersByUsername map[string]string
 
 	eventsByID   map[string]Event
 	sessions     map[string][]Session
@@ -47,7 +47,7 @@ func NewMemory(cfg MemoryConfig) *Memory {
 	return &Memory{
 		passwordIterations: cfg.PasswordIterations,
 		usersByID:          map[string]User{},
-		usersByEmail:       map[string]string{},
+		usersByUsername:    map[string]string{},
 		eventsByID:         map[string]Event{},
 		sessions:           map[string][]Session{},
 		participants:       map[string]map[string]Participant{},
@@ -57,10 +57,11 @@ func NewMemory(cfg MemoryConfig) *Memory {
 	}
 }
 
-func (m *Memory) CreateUser(email, password string, role Role) (User, error) {
-	email = strings.TrimSpace(strings.ToLower(email))
-	if email == "" || password == "" {
-		return User{}, errors.New("email and password required")
+func (m *Memory) CreateUser(username, password string, role Role) (User, error) {
+	username = strings.TrimSpace(username)
+	key := strings.ToLower(username)
+	if key == "" || password == "" {
+		return User{}, errors.New("username and password required")
 	}
 	if role != RoleAdmin && role != RoleOrganizer && role != RoleAttendee {
 		return User{}, errors.New("invalid role")
@@ -68,83 +69,30 @@ func (m *Memory) CreateUser(email, password string, role Role) (User, error) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if _, ok := m.usersByEmail[email]; ok {
+	if _, ok := m.usersByUsername[key]; ok {
 		return User{}, ErrAlreadyExists
 	}
 
 	salt := randomID(16)
 	u := User{
 		ID:           randomID(18),
-		Email:        email,
+		Username:     username,
 		Role:         role,
 		Salt:         salt,
 		PasswordHash: hashPassword(password, salt, m.passwordIterations),
 		CreatedAt:    time.Now(),
 	}
 	m.usersByID[u.ID] = u
-	m.usersByEmail[email] = u.ID
+	m.usersByUsername[key] = u.ID
 	return u, nil
 }
 
-// UpsertOAuthUser creates or updates a user record for an external auth provider.
-// Password fields are left empty.
-func (m *Memory) UpsertOAuthUser(externalID, email string, role Role) (User, error) {
-	email = strings.TrimSpace(strings.ToLower(email))
-	if email == "" {
-		return User{}, errors.New("email required")
-	}
-	if role != RoleAdmin && role != RoleOrganizer && role != RoleAttendee {
-		return User{}, errors.New("invalid role")
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if id, ok := m.usersByEmail[email]; ok {
-		u := m.usersByID[id]
-		if u.Email != email {
-			u.Email = email
-		}
-		if u.Role != role {
-			u.Role = role
-		}
-		m.usersByID[u.ID] = u
-		return u, nil
-	}
-
-	if externalID != "" {
-		if u, ok := m.usersByID[externalID]; ok {
-			if u.Email != "" && u.Email != email {
-				delete(m.usersByEmail, u.Email)
-			}
-			u.Email = email
-			u.Role = role
-			m.usersByID[u.ID] = u
-			m.usersByEmail[email] = u.ID
-			return u, nil
-		}
-	}
-
-	id := externalID
-	if id == "" {
-		id = randomID(18)
-	}
-	u := User{
-		ID:        id,
-		Email:     email,
-		Role:      role,
-		CreatedAt: time.Now(),
-	}
-	m.usersByID[u.ID] = u
-	m.usersByEmail[email] = u.ID
-	return u, nil
-}
-
-func (m *Memory) GetUserByEmail(email string) (User, error) {
-	email = strings.TrimSpace(strings.ToLower(email))
+func (m *Memory) GetUserByUsername(username string) (User, error) {
+	username = strings.TrimSpace(username)
+	key := strings.ToLower(username)
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	id, ok := m.usersByEmail[email]
+	id, ok := m.usersByUsername[key]
 	if !ok {
 		return User{}, ErrNotFound
 	}
@@ -165,8 +113,8 @@ func (m *Memory) GetUserByID(id string) (User, error) {
 	return u, nil
 }
 
-func (m *Memory) VerifyPassword(email, password string) (User, error) {
-	u, err := m.GetUserByEmail(email)
+func (m *Memory) VerifyPassword(username, password string) (User, error) {
+	u, err := m.GetUserByUsername(username)
 	if err != nil {
 		return User{}, err
 	}

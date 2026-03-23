@@ -2,12 +2,11 @@ package store
 
 import "strings"
 
-func SeedDefaultAdmin(m *Memory, email, password string) {
-	email = strings.TrimSpace(email)
+func SeedDefaultAdmin(m *Memory, username, password string) {
+	username = strings.TrimSpace(username)
 	password = strings.TrimSpace(password)
-	if email == "" || password == "" {
+	if username == "" || password == "" {
 		return
 	}
-	_, _ = m.CreateUser(email, password, RoleAdmin)
+	_, _ = m.CreateUser(username, password, RoleAdmin)
 }
-

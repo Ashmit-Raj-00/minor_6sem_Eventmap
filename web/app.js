@@ -2,6 +2,8 @@ const CFG = (globalThis && globalThis.__EVENTMAP_CONFIG__) || {};
 const API = CFG.apiBase || "";
 const tokenKey = "eventmap_token";
 const emailKey = "eventmap_last_email";
+const viewKey = "eventmap_view";
+const mapStateKey = "eventmap_map_state_v1";
 
 let token = localStorage.getItem(tokenKey) || "";
 let me = null;
@@ -37,9 +39,18 @@ let eventMarkers = [];
 let selectedEventId = "";
 let allEvents = [];
 let lastLocation = null; // {lat,lng}
+let eventsLoading = false;
 
 function $(id) {
   return document.getElementById(id);
+}
+
+function debounce(fn, ms) {
+  let t = null;
+  return (...args) => {
+    if (t) clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
 }
 
 function setMsg(el, text, kind) {
@@ -128,11 +139,28 @@ async function api(path, opts = {}) {
 
 function initMap() {
   const start = { lat: 12.9716, lng: 77.5946 }; // fallback
-  map = L.map("map", { zoomControl: true }).setView([start.lat, start.lng], 12);
+  const saved = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(mapStateKey) || "null");
+    } catch {
+      return null;
+    }
+  })();
+  const initial = saved && typeof saved.lat === "number" && typeof saved.lng === "number" && typeof saved.zoom === "number" ? saved : { lat: start.lat, lng: start.lng, zoom: 12 };
+
+  map = L.map("map", { zoomControl: true }).setView([initial.lat, initial.lng], initial.zoom);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
+
+  map.on(
+    "moveend",
+    debounce(() => {
+      const c = map.getCenter();
+      localStorage.setItem(mapStateKey, JSON.stringify({ lat: c.lat, lng: c.lng, zoom: map.getZoom() }));
+    }, 400)
+  );
 
   map.on("click", (e) => {
     pinned = { lat: e.latlng.lat, lng: e.latlng.lng };
@@ -177,6 +205,13 @@ function clearEventMarkers() {
   eventMarkers = [];
 }
 
+function tagChipHtml(tag) {
+  const t = String(tag || "");
+  const color = colorFromString(t);
+  const bg = `linear-gradient(180deg, rgba(255,255,255,0.16), rgba(0,0,0,0.10)), ${color}`;
+  return `<span class="tagChip" style="border-color:${color};background:${bg}">${escapeHtml(t)}</span>`;
+}
+
 function addEventMarkers(events) {
   clearEventMarkers();
   for (const e of events) {
@@ -190,7 +225,7 @@ function addEventMarkers(events) {
       weight: 2,
     }).addTo(map);
     m.on("click", () => selectEvent(e.id));
-    const tags = (e.tags || []).map((t) => `<span class="tagChip">${escapeHtml(t)}</span>`).join(" ");
+    const tags = (e.tags || []).map((t) => tagChipHtml(t)).join(" ");
     m.bindPopup(
       `<div style="display:grid;gap:6px;min-width:210px">
         <div><strong>${escapeHtml(e.title)}</strong></div>
@@ -254,6 +289,7 @@ function renderEvents(events) {
   for (const e of events) {
     const row = document.createElement("div");
     row.className = "eventRow" + (e.id === selectedEventId ? " selected" : "");
+    row.style.setProperty("--event-color", pickEventColor(e));
     row.onclick = () => selectEvent(e.id);
 
     const title = document.createElement("div");
@@ -275,6 +311,9 @@ function renderEvents(events) {
         const chip = document.createElement("span");
         chip.className = "tagChip";
         chip.textContent = t;
+        const color = colorFromString(String(t));
+        chip.style.borderColor = color;
+        chip.style.background = `linear-gradient(180deg, rgba(255,255,255,0.16), rgba(0,0,0,0.10)), ${color}`;
         chip.onclick = (ev) => {
           ev.stopPropagation();
           $("tagFilter").value = t;
@@ -297,22 +336,34 @@ function renderEvents(events) {
 }
 
 async function refreshEvents() {
-  const radiusKm = Number($("radiusKm").value || "0");
-  const center = map.getCenter();
-  const lat = center.lat;
-  const lng = center.lng;
-
+  if (eventsLoading) return;
+  eventsLoading = true;
+  const refreshBtn = $("refreshBtn");
+  if (refreshBtn) refreshBtn.disabled = true;
   try {
-    const data = await api(`/api/events/nearby?lat=${lat}&lng=${lng}&radius_km=${radiusKm}`, { method: "GET" });
-    allEvents = data.events || [];
-  } catch {
-    const data = await api(`/api/events`, { method: "GET" });
-    allEvents = data.events || [];
+    const radiusKm = Number($("radiusKm").value || "0");
+    const center = map.getCenter();
+    const lat = center.lat;
+    const lng = center.lng;
+
+    try {
+      const data = await api(`/api/events/nearby?lat=${lat}&lng=${lng}&radius_km=${radiusKm}`, { method: "GET" });
+      allEvents = data.events || [];
+    } catch {
+      const data = await api(`/api/events`, { method: "GET" });
+      allEvents = data.events || [];
+    }
+    if (selectedEventId && !allEvents.some((e) => e.id === selectedEventId)) {
+      selectedEventId = "";
+    }
+    selectEvent(selectedEventId);
+  } catch (err) {
+    const msg = err?.message || "Could not refresh events";
+    toast(msg, "error");
+  } finally {
+    eventsLoading = false;
+    if (refreshBtn) refreshBtn.disabled = false;
   }
-  if (selectedEventId && !allEvents.some((e) => e.id === selectedEventId)) {
-    selectedEventId = "";
-  }
-  selectEvent(selectedEventId);
 }
 
 async function loadMe() {
@@ -502,7 +553,8 @@ function filterEvents(events) {
 }
 
 function render() {
-  const filtered = filterEvents(allEvents);
+  const filtered = filterEvents(allEvents).slice();
+  filtered.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
   renderEvents(filtered);
   addEventMarkers(filtered);
 }
@@ -546,6 +598,9 @@ function renderEventDetail(e) {
       const chip = document.createElement("span");
       chip.className = "tagChip";
       chip.textContent = t;
+      const color = colorFromString(String(t));
+      chip.style.borderColor = color;
+      chip.style.background = `linear-gradient(180deg, rgba(255,255,255,0.16), rgba(0,0,0,0.10)), ${color}`;
       chip.onclick = () => {
         $("tagFilter").value = t;
         render();
@@ -679,8 +734,43 @@ async function refreshLeaderboards() {
   }
 }
 
+function setView(view) {
+  const v = view === "events" || view === "profile" ? view : "map";
+  document.body.dataset.view = v;
+  localStorage.setItem(viewKey, v);
+  if (v !== "map") document.body.classList.remove("filtersOpen");
+
+  document.querySelectorAll(".mobileNav .navBtn").forEach((btn) => {
+    const isActive = btn.getAttribute("data-view") === v;
+    if (isActive) btn.setAttribute("aria-current", "page");
+    else btn.removeAttribute("aria-current");
+  });
+
+  if (v === "map" && map) {
+    setTimeout(() => map.invalidateSize(), 80);
+  }
+}
+
+function initMobileUi() {
+  const filtersBtn = $("filtersToggleBtn");
+  if (filtersBtn) {
+    filtersBtn.onclick = () => {
+      document.body.classList.toggle("filtersOpen");
+      if (document.body.classList.contains("filtersOpen")) setView("map");
+    };
+  }
+
+  document.querySelectorAll(".mobileNav .navBtn").forEach((btn) => {
+    btn.onclick = () => setView(btn.getAttribute("data-view") || "map");
+  });
+
+  const saved = localStorage.getItem(viewKey) || "";
+  setView(saved || "map");
+}
+
 async function main() {
   initMap();
+  initMobileUi();
 
   const googleBtn = $("googleLoginBtn");
   if (googleBtn) googleBtn.onclick = onGoogleLogin;
@@ -705,6 +795,10 @@ async function main() {
   $("createEventBtn").onclick = onCreateEvent;
   $("refreshBtn").onclick = refreshEvents;
   $("lbRefreshBtn").onclick = refreshLeaderboards;
+
+  const refreshDebounced = debounce(() => refreshEvents().catch(() => {}), 700);
+  map.on("moveend", refreshDebounced);
+  $("radiusKm").addEventListener("input", refreshDebounced);
 
   $("locateBtn").onclick = async () => {
     try {

@@ -86,6 +86,60 @@ func (m *Memory) CreateUser(email, password string, role Role) (User, error) {
 	return u, nil
 }
 
+// UpsertOAuthUser creates or updates a user record for an external auth provider.
+// Password fields are left empty.
+func (m *Memory) UpsertOAuthUser(externalID, email string, role Role) (User, error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email == "" {
+		return User{}, errors.New("email required")
+	}
+	if role != RoleAdmin && role != RoleOrganizer && role != RoleAttendee {
+		return User{}, errors.New("invalid role")
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if id, ok := m.usersByEmail[email]; ok {
+		u := m.usersByID[id]
+		if u.Email != email {
+			u.Email = email
+		}
+		if u.Role != role {
+			u.Role = role
+		}
+		m.usersByID[u.ID] = u
+		return u, nil
+	}
+
+	if externalID != "" {
+		if u, ok := m.usersByID[externalID]; ok {
+			if u.Email != "" && u.Email != email {
+				delete(m.usersByEmail, u.Email)
+			}
+			u.Email = email
+			u.Role = role
+			m.usersByID[u.ID] = u
+			m.usersByEmail[email] = u.ID
+			return u, nil
+		}
+	}
+
+	id := externalID
+	if id == "" {
+		id = randomID(18)
+	}
+	u := User{
+		ID:        id,
+		Email:     email,
+		Role:      role,
+		CreatedAt: time.Now(),
+	}
+	m.usersByID[u.ID] = u
+	m.usersByEmail[email] = u.ID
+	return u, nil
+}
+
 func (m *Memory) GetUserByEmail(email string) (User, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	m.mu.RLock()

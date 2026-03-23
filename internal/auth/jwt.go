@@ -18,6 +18,7 @@ var (
 
 type Claims struct {
 	Sub  string `json:"sub"`
+	Email string `json:"email,omitempty"`
 	Role string `json:"role"`
 	Iat  int64  `json:"iat"`
 	Exp  int64  `json:"exp"`
@@ -60,7 +61,10 @@ func VerifyHS256(secret []byte, token string, now time.Time) (Claims, error) {
 	if err := json.Unmarshal(headerJSON, &header); err != nil {
 		return Claims{}, ErrTokenMalformed
 	}
-	if header["alg"] != "HS256" || header["typ"] != "JWT" {
+	if header["alg"] != "HS256" {
+		return Claims{}, ErrTokenInvalid
+	}
+	if typ, ok := header["typ"]; ok && typ != "JWT" {
 		return Claims{}, ErrTokenInvalid
 	}
 
@@ -94,4 +98,3 @@ func signHS256(secret []byte, msg string) []byte {
 	_, _ = mac.Write([]byte(msg))
 	return mac.Sum(nil)
 }
-

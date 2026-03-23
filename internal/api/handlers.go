@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -25,6 +27,23 @@ func (h *handlers) health(w http.ResponseWriter, r *http.Request) {
 		"ok":      true,
 		"now_utc": time.Now().UTC().Format(time.RFC3339),
 	})
+}
+
+func (h *handlers) configJS(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	body, _ := json.Marshal(map[string]any{
+		"apiBase":         "",
+		"publicOrigin":    h.cfg.PublicOrigin,
+		"authProvider":    strings.TrimSpace(strings.ToLower(h.cfg.AuthProvider)),
+		"supabaseUrl":     h.cfg.SupabaseURL,
+		"supabaseAnonKey": h.cfg.SupabaseAnonKey,
+	})
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = fmt.Fprintf(w, "window.__EVENTMAP_CONFIG__=%s;\n", body)
 }
 
 func (h *handlers) register(w http.ResponseWriter, r *http.Request) {

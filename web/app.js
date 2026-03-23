@@ -682,6 +682,7 @@ function initMobileUi() {
     filtersBtn.onclick = () => {
       document.body.classList.toggle("filtersOpen");
       if (document.body.classList.contains("filtersOpen")) setView("map");
+      queueTopbarMeasure();
     };
   }
 
@@ -691,6 +692,25 @@ function initMobileUi() {
 
   const saved = localStorage.getItem(viewKey) || "";
   setView(saved || "map");
+
+  queueTopbarMeasure();
+  window.addEventListener("resize", queueTopbarMeasure);
+}
+
+let topbarMeasureQueued = false;
+function queueTopbarMeasure() {
+  if (topbarMeasureQueued) return;
+  topbarMeasureQueued = true;
+  requestAnimationFrame(() => {
+    topbarMeasureQueued = false;
+    const topbar = document.querySelector(".topbar");
+    if (!topbar) return;
+    const h = Math.round(topbar.getBoundingClientRect().height);
+    document.body.style.setProperty("--topbar-h", `${h}px`);
+    if (map && document.body.dataset.view === "map") {
+      setTimeout(() => map.invalidateSize(), 60);
+    }
+  });
 }
 
 async function main() {

@@ -3,61 +3,52 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#5c94fc" />
+    <meta name="theme-color" content="#0a0a0a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>EventMap</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
-      rel="stylesheet"
-    />
+    <title>Tactical Uplink</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""
-    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   </head>
   <body>
     <header class="topbar">
       <div class="brand">
-        <div class="brandMark"></div>
+        <div class="brandMark">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        </div>
         <div>
-          <div class="brandName">EventMap</div>
-          <div class="brandTag muted">WORLD 1-1 • Explore → Tag → Check-in → Level up</div>
+          <div class="brandName">MISSION STATUS</div>
+          <div class="brandTag muted">NODE: 04-B / SECTOR 7</div>
         </div>
       </div>
 
-      <button id="filtersToggleBtn" class="btn btn-quiet smallBtn mobileOnly" type="button">Filters</button>
+      <button id="filtersToggleBtn" class="btn btn-quiet smallBtn mobileOnly" type="button">FILTERS</button>
 
       <div class="topControls">
         <div class="search">
-          <input id="searchInput" type="search" placeholder="Search events, tags, places…" />
+          <input id="searchInput" type="search" placeholder="SCAN SIGNATURES..." />
         </div>
         <div class="row">
           <label class="inline">
-            Tag
-            <input id="tagFilter" type="text" placeholder="e.g. music" />
+            INTEL TAG
+            <input id="tagFilter" type="text" placeholder="e.g. VIP" />
           </label>
           <label class="inline">
-            Radius (km)
+            RADIUS (KM)
             <input id="radiusKm" type="number" min="0" step="0.5" value="10" />
           </label>
-          <button id="locateBtn" class="btn btn-quiet">Locate</button>
-          <button id="refreshBtn" class="btn btn-quiet">Refresh</button>
+          <button id="locateBtn" class="btn btn-secondary">LOCATE</button>
+          <button id="refreshBtn" class="btn btn-secondary">REFRESH</button>
         </div>
       </div>
 
       <div class="userbar">
         <div class="userChip">
-          <div id="whoami" class="userLine">Not signed in</div>
-          <div id="scoreLine" class="muted small">Sign in to earn XP</div>
+          <div id="whoami" class="userLine">NO LINK</div>
+          <div id="scoreLine" class="small">AUTHENTICATE FOR CLEARANCE</div>
         </div>
-        <button id="logoutBtn" class="btn btn-quiet" hidden>Logout</button>
+        <button id="logoutBtn" class="btn btn-quiet" hidden>LOGOUT</button>
       </div>
     </header>
 
@@ -65,90 +56,89 @@
       <aside class="sidebar">
         <section class="panel">
           <div class="panelHeader">
-            <h2>Profile</h2>
-            <span id="levelPill" class="pill small" hidden>Level —</span>
+            <h2>OPERATIVE BIOMETRICS</h2>
+            <span id="levelPill" class="pill" hidden>LVL —</span>
           </div>
           <div class="xp">
             <div id="xpFill" class="xpFill" style="width: 0%"></div>
           </div>
-          <div id="xpText" class="muted small">0 / 100 XP</div>
-          <div class="hint muted">Quests: join (+10), tag near event (+5), check-in (+30), create (+50).</div>
+          <div id="xpText" class="small muted">0 / 100 XP</div>
+          <div class="hint muted">OPERATIONS: Join (+10), Tag Intel (+5), Deployment (+30), Initiate (+50).</div>
         </section>
 
         <section class="panel">
           <div class="panelHeader">
-            <h2>Start</h2>
+            <h2>UPLINK STATUS</h2>
             <div class="row">
-              <button id="authModeLogin" class="btn btn-quiet smallBtn">Login</button>
-              <button id="authModeRegister" class="btn btn-quiet smallBtn">Register</button>
+              <button id="authModeLogin" class="btn btn-quiet smallBtn">LOGIN</button>
+              <button id="authModeRegister" class="btn btn-quiet smallBtn">REGISTER</button>
             </div>
           </div>
           <div class="card">
-            <div id="authTitle" class="authTitle">LOGIN</div>
+            <div id="authTitle" class="authTitle" style="color:var(--cyan);font-family:'Rajdhani',sans-serif;font-weight:700;margin-bottom:8px;">LOGIN</div>
             <div class="grid2">
-              <label>Username <input id="authUsername" type="text" autocomplete="username" /></label>
-              <label>Password <input id="authPassword" type="password" autocomplete="current-password" /></label>
+              <label>ID <input id="authUsername" type="text" autocomplete="username" /></label>
+              <label>PASSKEY <input id="authPassword" type="password" autocomplete="current-password" /></label>
             </div>
             <div id="regExtras" class="grid2" hidden>
               <label>
-                Role
+                CLEARANCE
                 <select id="authRole">
-                  <option value="attendee">attendee</option>
-                  <option value="organizer">organizer</option>
+                  <option value="attendee">Operative</option>
+                  <option value="organizer">Command</option>
                 </select>
               </label>
               <label class="muted small">
-                Tip
-                <span class="small">Organizer can create events.</span>
+                NOTE: Command can initiate ops.
               </label>
             </div>
-            <div class="row">
-              <button id="authSubmitBtn" class="btn">Start!</button>
-              <button id="authGuestBtn" class="btn btn-secondary">Browse as guest</button>
+            <div class="row" style="margin-top:12px;">
+              <button id="authSubmitBtn" class="btn" style="background:var(--purple);color:#fff;">AUTHENTICATE</button>
+              <button id="authGuestBtn" class="btn btn-secondary">GUEST ACCESS</button>
             </div>
             <div id="authMsg" class="msg"></div>
           </div>
         </section>
 
         <section id="createWrap" class="panel" hidden>
-          <h2>Create</h2>
+          <h2>INITIATE OPERATION</h2>
           <div class="card">
-            <h3>New Event (organizer/admin)</h3>
-            <label>Title <input id="evTitle" type="text" /></label>
-            <label>Description <textarea id="evDesc" rows="3"></textarea></label>
+            <h3>NEW MISSION (COMMAND)</h3>
+            <label>CODENAME <input id="evTitle" type="text" /></label>
+            <label>BRIEFING <textarea id="evDesc" rows="3"></textarea></label>
             <div class="grid2">
-              <label>Starts <input id="evStart" type="datetime-local" /></label>
-              <label>Ends <input id="evEnd" type="datetime-local" /></label>
+              <label>T-ZERO <input id="evStart" type="datetime-local" /></label>
+              <label>EXTRACTION <input id="evEnd" type="datetime-local" /></label>
             </div>
-            <label>Tags (comma separated) <input id="evTags" type="text" placeholder="music, food, meetup" /></label>
+            <label>INTEL TAGS <input id="evTags" type="text" placeholder="vip, stealth" /></label>
             <div class="grid2">
-              <label>Check-in radius (km) <input id="evCheckinRadiusKm" type="number" min="0.05" step="0.05" value="0.2" /></label>
-              <label>Address <input id="evAddress" type="text" placeholder="(optional)" /></label>
+              <label>DROP RADIUS (KM) <input id="evCheckinRadiusKm" type="number" min="0.05" step="0.05" value="0.2" /></label>
+              <label>COORDINATES <input id="evAddress" type="text" placeholder="(optional)" /></label>
             </div>
-            <div class="row">
-              <div class="pill">
-                <span class="muted">Pinned:</span>
+            <div class="row" style="margin-top:12px;">
+              <div class="pill" style="background:transparent;border:1px solid var(--border-subtle);color:var(--cyan)">
+                <span>TARGET:</span>
                 <span id="pinnedLatLng" class="mono">—</span>
               </div>
-              <button id="createEventBtn" class="btn">Create</button>
+              <button id="createEventBtn" class="btn" style="background:var(--cyan);color:#000;">DEPLOY</button>
             </div>
             <div id="createMsg" class="msg"></div>
           </div>
-          <div class="hint muted">Tip: click the map to pin the event location.</div>
+          <div class="hint muted">SELECT TARGET VECTOR ON RADAR.</div>
         </section>
 
         <section class="panel">
           <div class="panelHeader">
-            <h2>Leaderboards</h2>
-            <button id="lbRefreshBtn" class="btn btn-quiet smallBtn" disabled>Update</button>
+            <h2>GLOBAL RANKINGS</h2>
+            <button id="lbRefreshBtn" class="btn btn-quiet smallBtn" disabled>SYNC</button>
           </div>
           <div class="card">
-            <h3>Global</h3>
-            <div id="globalLB" class="lbList muted small">Sign in to view.</div>
+            <h3>NETWORK</h3>
+            <div id="globalLB" class="lbList muted small">AUTHENTICATE TO DECRYPT.</div>
           </div>
           <div class="card">
-            <h3>Selected Event</h3>
-            <div id="eventLB" class="lbList muted small">Select an event.</div>
+            <h3>ACTIVE OPS</h3>
+            <div id="eventLB" class="lbList muted small">SELECT OPERATION.</div>
           </div>
         </section>
       </aside>
@@ -156,37 +146,37 @@
       <section class="content">
         <section class="panel mapPanel">
           <div class="panelHeader">
-            <h2>Map</h2>
-            <div class="hint muted">Click to pin • Marker click selects event</div>
+            <h2>DENSITY RADAR</h2>
+            <div class="hint muted">SELECT TARGET MARKER OR MAP VECTOR</div>
           </div>
           <div id="map" class="map"></div>
         </section>
 
         <section class="panel listPanel">
           <div class="panelHeader">
-            <h2>Events</h2>
-            <div id="selectedHint" class="muted small">No event selected</div>
+            <h2>ACTIVE MISSIONS</h2>
+            <div id="selectedHint" class="muted small">AWAITING OBJECTIVE...</div>
           </div>
-          <div id="eventDetail" class="card">
+          <div id="eventDetail" class="card" style="border-left:4px solid var(--cyan)">
             <div class="eventDetailTop">
               <div>
-                <div id="eventTitle" class="eventDetailTitle">Select an event</div>
-                <div id="eventSub" class="muted small">Tip: click a marker or an event card</div>
+                <div id="eventTitle" class="eventDetailTitle" style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.4rem;color:#fff;text-transform:uppercase;">NO OPERATION SELECTED</div>
+                <div id="eventSub" class="muted small" style="font-family:'Share Tech Mono',monospace;">ACQUIRE TARGET ON RADAR</div>
               </div>
               <div class="row">
-                <button id="eventFocusBtn" class="btn btn-quiet smallBtn" disabled>Focus</button>
-                <button id="eventJoinBtn" class="btn smallBtn" disabled>Join</button>
-                <button id="eventCheckinBtn" class="btn btn-secondary smallBtn" disabled>Check-in</button>
+                <button id="eventFocusBtn" class="btn btn-quiet smallBtn" disabled>TRACK</button>
+                <button id="eventJoinBtn" class="btn smallBtn" disabled style="background:var(--purple);color:#fff;">ACCEPT</button>
+                <button id="eventCheckinBtn" class="btn btn-secondary smallBtn" disabled>DEPLOY</button>
               </div>
             </div>
             <div class="grid2">
               <label>
-                Add tag (near event)
-                <input id="eventTagInput" type="text" placeholder="e.g. music" />
+                LOG INTEL (PROXIMITY REQUIRED)
+                <input id="eventTagInput" type="text" placeholder="e.g. secure" />
               </label>
               <div class="row" style="align-self:end">
-                <button id="eventTagBtn" class="btn btn-quiet smallBtn" disabled>Tag</button>
-                <span id="eventDistance" class="muted small">—</span>
+                <button id="eventTagBtn" class="btn btn-quiet smallBtn" disabled>SUBMIT</button>
+                <span id="eventDistance" class="muted small" style="color:var(--cyan);">—</span>
               </div>
             </div>
             <div id="eventTags" class="tags"></div>
@@ -197,18 +187,15 @@
     </main>
 
     <nav class="mobileNav" aria-label="Views">
-      <button class="navBtn" type="button" data-view="map" aria-current="page">Map</button>
-      <button class="navBtn" type="button" data-view="events">Events</button>
-      <button class="navBtn" type="button" data-view="profile">Profile</button>
+      <button class="navBtn" type="button" data-view="map" aria-current="page">RADAR</button>
+      <button class="navBtn" type="button" data-view="events">INTEL</button>
+      <button class="navBtn" type="button" disabled style="opacity:0.3;cursor:not-allowed">COMM</button>
+      <button class="navBtn" type="button" data-view="profile">CHARACTER</button>
     </nav>
 
     <div id="toasts" class="toasts"></div>
 
-    <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""
-    ></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="/config.js"></script>
     <script src="app.js"></script>
   </body>

@@ -1,0 +1,472 @@
+Gandhi Institute of Engineering and Technology University, Gunupur
+Dept. of CSE, CSE-DS and CSE-AIML
+
+MINOR PROJECT REPORT DOCUMENTATION (EventMap)
+
+Project Title: EventMap (MVP) — Event Management Web App with Map UI
+Academic Year/Semester: <<AY 20XX–20XX, Semester VI>>
+Submitted By: <<Student Name(s), Roll No(s), Regd No(s), Section>>
+Branch: <<CSE / CSE-DS / CSE-AIML>>
+Project Guide: <<Guide Name, Designation>>
+Date of Submission: <<DD Month YYYY>>
+
+----------------------------------------------------------------------
+1. FRONT PAGE (Attached) — Color Page
+Use the official GIETU front page template and attach it in final print/PDF.
+
+2. CERTIFICATE — Color Page
+Attach the signed certificate page provided by the department.
+
+3. ACKNOWLEDGEMENT — Color Page
+ACKNOWLEDGEMENT (Template)
+I/We express our sincere gratitude to GIET University, Gunupur, Department of
+CSE / CSE-DS / CSE-AIML, for providing the opportunity to carry out the Minor
+Project titled “EventMap (MVP)”.
+I/We would like to thank our project guide <<Guide Name>> for continuous
+guidance, valuable suggestions, and support throughout the project.
+I/We also thank the Head of Department <<HOD Name>>, faculty members, and
+classmates for their cooperation and encouragement.
+Finally, I/we thank my/our parents and friends for their constant support.
+
+Place: <<Gunupur>>
+Date: <<DD Month YYYY>>
+Submitted by: <<Student Name(s)>>
+
+----------------------------------------------------------------------
+4. ABSTRACT (Maximum 2 Pages)
+EventMap is a web-based event management application that provides a map-centric
+interface for discovering and interacting with events. Unlike traditional event
+apps that rely only on list pages, EventMap presents events directly on an
+interactive map so that users can understand spatial context (distance, nearby
+options, and venue placement) before deciding to participate.
+
+The application supports the complete basic event lifecycle: user registration
+and login, browsing and searching events, creating and managing events and
+sessions (for organizers/admin), joining events (for attendees), and viewing
+participants and leaderboards. To encourage engagement, the system implements a
+lightweight gamification model (points/XP, level, global leaderboard, and per-
+event leaderboard). Points are awarded for meaningful actions such as creating
+events, joining, tagging, and check-in.
+
+From a technical perspective, EventMap is implemented as a client–server web
+application:
+  - Backend: Go (net/http) REST APIs secured using JWT authentication with basic
+    Role-Based Access Control (RBAC). Middleware handles authorization, logging,
+    request IDs, CORS, and rate limiting.
+  - Frontend: Static HTML/CSS/JavaScript UI using Leaflet and OpenStreetMap
+    tiles for a modern map experience, plus mobile-friendly navigation and
+    filters (tag, radius, search).
+
+The system performs nearby discovery and location gating using geographic
+distance computation (Haversine formula). On-ground engagement is enabled via
+location-based operations:
+  - Tagging is permitted only when the user is near the event location.
+  - Check-in is permitted only when the user is inside a configurable radius.
+
+For data persistence, the backend maintains runtime state in memory and saves it
+to a local CSV-based storage under the data/ directory. The storage location can
+be configured. In addition, background goroutines and buffered job queues
+simulate asynchronous notification and analytics pipelines. The solution can be
+executed locally for development and demonstration, and it is also deployment-
+ready using Docker. The frontend can be hosted as static files (e.g., Netlify),
+while the backend can be deployed separately on any platform that runs Docker or
+a Go binary.
+
+----------------------------------------------------------------------
+5. INTRODUCTION
+5.1 Purpose
+The purpose of EventMap is to provide a simple and intuitive platform for event
+management with a focus on location. The system is designed to help users find
+relevant events quickly and help organizers manage events without needing a
+complex portal.
+
+Primary goals:
+1) Improve event discovery using a map-first UI.
+2) Provide role-based operations (attendee vs organizer/admin).
+3) Provide location-based engagement (tag and check-in) to make participation
+   more meaningful and to reduce fake attendance.
+4) Provide motivation and interaction through an XP/level and leaderboard model.
+
+5.2 Scope
+In-scope:
+- Register/Login with JWT
+- RBAC roles: attendee, organizer, admin
+- Event + session management
+- Join, participants tracking
+- Nearby events search (Haversine)
+- Location-gated tag/check-in
+- Points/XP + global/event leaderboards
+- CSV persistence (data/)
+
+Out-of-scope (MVP):
+- Payments/ticketing
+- Real-time chat/push notifications (only simulated)
+- Full admin console
+- Advanced GIS (routing/geocoding/clustering)
+
+5.3 Features
+Frontend:
+- Map view with markers and popups
+- Search + tag filter + radius filter
+- Geolocation “Locate”
+- Auth (login/register) + guest browsing
+- Create event using pinned map coordinates (organizer/admin)
+- Join, tag, check-in, view tags
+- Global and event leaderboards
+
+Backend:
+- REST APIs: auth, events, sessions, participants, leaderboards
+- JWT middleware + RBAC middleware
+- Rate limiting, request IDs, logging
+- Async analytics/notification queues
+- CSV load/save persistence
+
+----------------------------------------------------------------------
+6. LITERATURE REVIEW (Elaborated)
+This project is influenced by and related to multiple areas of software systems:
+
+6.1 Event Management Systems
+Typical event systems provide workflows such as event creation, time scheduling,
+participant enrollment, and basic discovery. Many existing systems are list-
+driven and focus on form-based administration. EventMap implements a minimal
+version of these ideas while prioritizing ease-of-use and quick operations.
+
+6.2 Location-Based Services (LBS) and Geo-Fencing
+Location-based services use the user's geographic position to provide relevant
+content. Common patterns include:
+  - Nearby search: listing items within a radius around the user's location.
+  - Geo-fencing: restricting an action to users physically present inside a
+    boundary (for example, check-ins or access control).
+EventMap applies these ideas using distance computation to filter and validate
+requests for tagging and check-in.
+
+6.3 Map-First User Interfaces
+Modern systems frequently integrate maps for discovery and navigation. A map
+reduces cognitive load when events are location-dependent and can help users
+decide based on distance and accessibility. EventMap uses Leaflet (client-side
+mapping library) with OpenStreetMap tiles (open map data) as a cost-effective
+and widely used approach.
+
+6.4 Security and Authorization in Web APIs
+Token-based authentication (JWT) is a common approach for stateless
+authentication in REST APIs. RBAC is also widely used to restrict privileged
+operations (create event, manage sessions, view participants). EventMap follows
+these standard design principles through middleware enforcement.
+
+6.5 Gamification for Engagement
+Gamification approaches such as points, levels, and leaderboards are widely used
+to increase participation and retention. EventMap applies a simple points model
+so that core actions translate into measurable progress and community ranking.
+
+----------------------------------------------------------------------
+7. SYSTEM ANALYSIS
+7.1 User Requirements (SRS)
+7.1.1 Product Perspective
+EventMap is a standalone web application with:
+  - A client UI served as static files.
+  - A backend HTTP server exposing APIs.
+  - Local persistence using CSV files.
+The system is designed so that persistence can later be replaced with a
+relational database without major changes to the client experience.
+
+7.1.2 User Classes and Characteristics
+Attendee:
+  - Requires simple browsing and participation flows.
+  - May use mobile devices; location permission may be available or denied.
+Organizer:
+  - Creates and updates events and sessions.
+  - Requires clarity on event location (pinned coordinates) and schedule.
+Admin:
+  - Higher privilege for management and maintenance.
+
+Stakeholders:
+- Attendee: browse/search, nearby, join, tag/check-in, leaderboards
+- Organizer: attendee features + create events/sessions, view participants
+- Admin: organizer privileges + default seeded admin support
+
+Functional Requirements (FR)
+FR1 Register user (username/password/role)
+FR2 Login user and issue JWT
+FR3 List/search/filter events (tag/radius)
+FR4 Organizer/Admin create event (title/times/location/tags/radius)
+FR5 Organizer/Admin create sessions under events
+FR6 Join event
+FR7 Check-in only inside radius
+FR8 Tag event only near event location
+FR9 Show leaderboards (global + per-event)
+FR10 Persist data in CSV and restore on restart
+
+Non-Functional Requirements (NFR)
+NFR1 Security: JWT + RBAC for protected routes
+NFR2 Performance: fast list/nearby responses for campus scale
+NFR3 Reliability: CSV persistence + graceful shutdown
+NFR4 Usability: map-first UI for desktop/mobile
+NFR5 Maintainability: modular backend packages
+NFR6 Scalability: storage can later migrate to DB
+
+7.1.3 Interface Requirements
+User Interface:
+  - Map panel with markers for events.
+  - Sidebar panels for profile/auth, create event, and leaderboards.
+  - Filters: search, tag filter, radius filter; buttons: Locate, Refresh.
+  - Event detail panel with actions: Focus, Join, Tag, Check-in.
+
+Software Interfaces:
+  - Browser communicates with backend via HTTP/JSON.
+  - Backend reads/writes CSV files for persistence.
+  - Optional hosting separation: static frontend hosted separately, backend
+    accessed via API base configuration.
+
+7.1.4 Constraints and Assumptions
+Constraints:
+  - CSV persistence is suitable for small to medium usage (MVP), not for high-
+    concurrency enterprise workloads.
+  - Location depends on browser geolocation availability and permissions.
+Assumptions:
+  - Users have a modern browser.
+  - For full features, users allow geolocation when required.
+
+7.2 Hardware Requirements
+Server (dev/host): dual-core+, 2GB RAM min (4GB recommended), 200MB+ storage
+Client: smartphone/PC with modern browser; GPS optional/recommended
+
+7.3 Software Requirements
+- Go 1.22+
+- Modern browser
+- Optional Docker for deployment
+
+----------------------------------------------------------------------
+8. SYSTEM DESIGN & SPECIFICATIONS
+8.1 High Level Design (HLD)
+Architecture:
+- Browser UI (web/) <-> Go REST APIs (/api/*)
+- Storage: CSV files under data/
+- Async: goroutines + buffered queues (analytics/notifications)
+
+Module structure (repo):
+- cmd/server/main.go
+- internal/api (handlers, middleware, JSON helpers)
+- internal/auth (JWT sign/verify)
+- internal/store (memory + csvdb persistence + models)
+- internal/geo (Haversine distance)
+- internal/async (background runner)
+- web/ (HTML/CSS/JS frontend)
+
+Diagrams:
+See report/Minor_Project_Report_EventMap.md and report/diagrams/*.mmd
+
+8.1.1 Project Model (Expanded Component View)
+Frontend responsibilities:
+  - Render interactive map and markers.
+  - Manage auth token in browser storage and attach Authorization header.
+  - Capture location (Locate) and show distance to selected event.
+  - Submit API calls for create/join/tag/check-in and refresh leaderboards.
+
+Backend responsibilities:
+  - Validate input, enforce RBAC, issue and verify JWT.
+  - Compute nearby events and distance validation for geo-fenced actions.
+  - Persist state changes to CSV on a best-effort basis after writes.
+  - Emit analytics/notification jobs to async runner.
+
+Storage responsibilities:
+  - Maintain durable state across restarts using CSV snapshots.
+  - Support load at server start and save during runtime and shutdown.
+
+8.1.2 Data Storage Design (CSV “Database”)
+The system persists data into multiple CSV files (under CSV_DB_DIR, default data/).
+Typical files include:
+  - users.csv
+  - events.csv
+  - sessions.csv
+  - participants.csv
+  - user_points.csv
+  - event_points.csv
+  - checkins.csv
+
+This design is easy to demonstrate and debug, and it provides persistence
+without requiring a database server in the MVP.
+
+8.2 Low Level Design (LLD)
+Key Algorithms / Pseudocode
+1) Haversine Distance (km)
+R = 6371.0
+a = sin(dLat/2)^2 + cos(lat1)*cos(lat2)*sin(dLng/2)^2
+c = 2 * atan2(sqrt(a), sqrt(1-a))
+dist = R * c
+
+2) JWT Authentication (Middleware)
+- If Authorization missing: proceed as guest
+- Else parse Bearer token, verify signature/exp, load user, attach to context
+
+3) Tag near event (location-gated)
+- Normalize tag
+- If user farther than 0.75 km from event: forbidden
+- Else add tag (if not present) + award points
+
+4) Check-in (geofence)
+- Radius = event.checkinRadiusKm (default 0.2 km)
+- If farther than radius: forbidden
+- If already checked in: conflict
+- Else store check-in time + award points
+
+5) Points/XP model
+- create event: +50
+- join event: +10
+- tag near event: +5
+- check-in: +30
+- level = floor(points/100) + 1
+
+8.2.1 Input Validation Rules (Examples)
+Username:
+  - 3 to 32 characters
+  - Allowed: letters, numbers, underscore, hyphen, dot
+Password:
+  - 6 to 72 characters
+Event time fields:
+  - Must follow RFC3339 format at API boundary
+Tag normalization:
+  - Lowercase, trim, spaces -> hyphen
+  - Max length constraint (to keep UI clean)
+Check-in radius:
+  - Default 0.2 km if not set
+
+8.2.2 Security Design (MVP Level)
+Authentication:
+  - JWT token issued on login; token is verified on subsequent requests.
+Authorization:
+  - RBAC denies restricted actions if role is not allowed.
+Rate Limiting:
+  - Basic per-IP rate limiting to reduce abuse.
+CORS:
+  - Configurable origin to support separate frontend hosting.
+
+8.2.3 API Design (Elaborated Summary)
+Authentication:
+  - POST /api/auth/register : create a new account
+  - POST /api/auth/login    : login and receive token
+  - GET  /api/me            : get user profile and score
+Events:
+  - GET  /api/events        : list events
+  - GET  /api/events/nearby : list by radius (lat,lng,radius_km)
+  - POST /api/events        : create event (organizer/admin)
+  - GET  /api/events/{id}   : get single event details
+Event subroutes:
+  - GET/POST /api/events/{id}/sessions (POST organizer/admin)
+  - POST     /api/events/{id}/join
+  - GET      /api/events/{id}/participants (organizer/admin)
+  - POST     /api/events/{id}/tag      (location gated)
+  - POST     /api/events/{id}/checkin  (geofence)
+  - GET      /api/events/{id}/leaderboard
+Leaderboards:
+  - GET /api/leaderboard : global leaderboard
+
+Screenshots:
+Insert UI screenshots in your final Word/PDF as required by the format.
+Recommended screenshot set (for a bigger report):
+  1) Landing page (guest mode)
+  2) Login and Register screens (with role selection)
+  3) Map with multiple event markers and a selected event popup
+  4) Filters in action (tag + radius + search)
+  5) Create event form with pinned coordinates
+  6) Join event and participant list (organizer view)
+  7) Tagging near the event (success response)
+  8) Check-in flow (success + denied case)
+  9) Global leaderboard and event leaderboard
+
+----------------------------------------------------------------------
+9. METHODOLOGY
+Approach:
+- Requirement gathering (core event flows + map discovery)
+- API + data model design
+- Backend implementation (auth/store/geo/async/api)
+- Frontend implementation (Leaflet map UI + forms + actions)
+- Integration testing (browser + API calls)
+- Deployment readiness (Docker + static hosting option)
+
+Algorithms/Models (AIML note):
+This is not an AIML project; it uses system algorithms (Haversine), JWT/RBAC,
+and a points/XP model for engagement.
+
+9.1 Development Method (Iterative/Incremental)
+The project follows an iterative process:
+Iteration 1: Basic backend server, static UI, and event listing
+Iteration 2: Authentication and role-based operations
+Iteration 3: Event creation + sessions + participants
+Iteration 4: Nearby filtering and map interaction improvements
+Iteration 5: Location-gated tagging and check-in + points model
+Iteration 6: Persistence via CSV + deployment via Docker
+
+9.2 Tools and Technologies Used
+Backend:
+  - Go language (net/http)
+  - JWT for authentication
+  - Goroutines and channels for async jobs
+Frontend:
+  - HTML/CSS/JavaScript
+  - Leaflet mapping library
+  - OpenStreetMap tiles
+DevOps/Deployment:
+  - Docker (optional)
+  - Static hosting support (Netlify for web/)
+
+9.3 Testing Strategy (Documentation)
+Functional testing:
+  - Verify register/login and token usage
+  - Verify RBAC: organizer can create, attendee cannot create
+  - Verify join flow and participant list
+  - Verify tagging/check-in denied when far and allowed when near
+  - Verify leaderboard changes after actions
+
+API testing:
+  - Use Postman or curl to validate endpoints and error codes.
+  - Validate rate-limiting response (429) under repeated requests (optional).
+
+Persistence testing:
+  - Create users/events, restart server, confirm CSV reload restores data.
+
+9.4 Limitations (MVP)
+  - CSV persistence is not ideal for large-scale concurrency and complex queries.
+  - Geo-fencing is based on client-reported GPS coordinates (trust model is MVP).
+  - No advanced admin dashboard; only API-level controls.
+
+9.5 Future Enhancements
+  - Replace CSV store with relational DB (PostgreSQL/MySQL) and add migrations.
+  - Add geocoding for addresses and map search.
+  - Add clustering for markers and improved map performance.
+  - Add real notifications (email/push) and analytics dashboards.
+  - Add event moderation and admin user management.
+  - Add QR-based check-in to reduce GPS spoofing.
+
+----------------------------------------------------------------------
+API QUICK LIST (Optional)
+- POST /api/auth/register
+- POST /api/auth/login
+- GET  /api/me
+- GET  /api/events
+- GET  /api/events/nearby?lat=..&lng=..&radius_km=..
+- POST /api/events (organizer/admin)
+- GET/POST /api/events/{id}/sessions
+- POST /api/events/{id}/join
+- POST /api/events/{id}/tag
+- POST /api/events/{id}/checkin
+- GET  /api/leaderboard
+- GET  /api/events/{id}/leaderboard
+
+----------------------------------------------------------------------
+APPENDIX (Optional for a bigger submission)
+A) Environment Variables (Deployment/Run)
+  - PORT (default 8080)
+  - PUBLIC_ORIGIN (CORS origin; default http://localhost:<PORT>)
+  - JWT_SECRET (optional; random if not set)
+  - TOKEN_TTL (default 12h)
+  - PASSWORD_ITERATIONS (default 120000)
+  - CSV_DB_DIR (default data/)
+  - DEFAULT_ADMIN_USERNAME, DEFAULT_ADMIN_PASSWORD (optional)
+
+B) How to Run (Local)
+  1) Start backend: go run ./cmd/server
+  2) Open browser: http://localhost:8080
+
+C) Deployment Summary
+  - Build Docker image and run container mapping port 8080.
+  - Host frontend statically and point API base to backend domain (if separated).

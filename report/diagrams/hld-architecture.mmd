@@ -1,0 +1,7 @@
+flowchart LR
+  A[User Browser (PWA)] -->|HTTP/JSON| B[Go Backend net/http]
+  B -->|Serve static assets| C[web/ (HTML/CSS/JS)]
+  B -->|Read/Write| D[CSV Storage (data/*.csv)]
+  B -->|Enqueue jobs| E[Async Runner (goroutines)]
+  E -->|Logs/Telemetry| F[(Console Logs)]
+

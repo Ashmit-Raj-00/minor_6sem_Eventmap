@@ -1,0 +1,13 @@
+classDiagram
+  class User { +string ID; +string Username; +Role Role }
+  class Event { +string ID; +string Title; +float Lat; +float Lng; +float CheckinRadiusKm; +string CreatedBy }
+  class Session { +string ID; +string EventID; +string Title }
+  class Participant { +string UserID; +string EventID }
+  class MemoryStore { +CreateUser(); +CreateEvent(); +JoinEvent(); +CheckIn(); +Leaderboard() }
+  class Handlers { +register(); +login(); +events(); +eventSubroutes(); +leaderboard() }
+
+  User "1" --> "many" Event : creates
+  Event "1" --> "many" Session : has
+  User "many" --> "many" Event : joins
+  Handlers --> MemoryStore : uses
+

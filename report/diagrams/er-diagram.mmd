@@ -1,0 +1,46 @@
+erDiagram
+  USER ||--o{ EVENT : creates
+  EVENT ||--o{ SESSION : has
+  USER ||--o{ PARTICIPANT : "joins"
+  EVENT ||--o{ PARTICIPANT : "has"
+  USER ||--o{ CHECKIN : "checks-in"
+  EVENT ||--o{ CHECKIN : "receives"
+
+  USER {
+    string id PK
+    string username
+    string role
+    datetime createdAt
+  }
+  EVENT {
+    string id PK
+    string title
+    string description
+    datetime startsAt
+    datetime endsAt
+    float lat
+    float lng
+    string address
+    float checkinRadiusKm
+    string createdBy FK
+    datetime createdAt
+  }
+  SESSION {
+    string id PK
+    string eventId FK
+    string title
+    datetime startsAt
+    datetime endsAt
+    datetime createdAt
+  }
+  PARTICIPANT {
+    string userId FK
+    string eventId FK
+    datetime joinedAt
+  }
+  CHECKIN {
+    string userId FK
+    string eventId FK
+    datetime checkedInAt
+  }
+

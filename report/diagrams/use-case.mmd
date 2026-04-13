@@ -1,0 +1,19 @@
+flowchart LR
+  A[Attendee] --> UC1((Register/Login))
+  A --> UC2((Browse/Search Events))
+  A --> UC3((Nearby Events))
+  A --> UC4((Join Event))
+  A --> UC5((Tag Event Near Location))
+  A --> UC6((Check-in Near Location))
+  A --> UC7((View Leaderboards))
+
+  O[Organizer] --> UC8((Create Event))
+  O --> UC9((Create Session))
+  O --> UC10((View Participants))
+  O --> UC7
+
+  AD[Admin] --> UC8
+  AD --> UC9
+  AD --> UC10
+  AD --> UC7
+

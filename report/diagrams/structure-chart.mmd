@@ -1,0 +1,9 @@
+flowchart TB
+  M[cmd/server/main.go] --> CFG[internal/config]
+  M --> API[internal/api]
+  M --> STORE[internal/store]
+  M --> ASYNC[internal/async]
+  API --> AUTH[internal/auth]
+  STORE --> GEO[internal/geo]
+  API --> WEB[web/ static UI]
+

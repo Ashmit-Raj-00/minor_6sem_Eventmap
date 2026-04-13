@@ -1,0 +1,15 @@
+sequenceDiagram
+  participant U as User
+  participant W as Web UI
+  participant S as Go API
+  participant M as Memory/CSV Store
+
+  U->>W: Click "Check-in"
+  W->>W: Read device location (lat,lng)
+  W->>S: POST /api/events/{id}/checkin (JWT, lat,lng)
+  S->>S: Verify JWT + RBAC
+  S->>M: Validate distance <= checkinRadiusKm
+  M-->>S: Store check-in + add points
+  S-->>W: 201 checkedInAt
+  W-->>U: Show success + refresh score
+

@@ -1,1 +1,2 @@
-event_id,user_id,joined_at
+user_id,event_id,joined_at
+event_id,user_id,

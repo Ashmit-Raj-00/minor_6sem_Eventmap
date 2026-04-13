@@ -9,6 +9,4 @@ services:
       PORT: 8080
       PUBLIC_ORIGIN: http://localhost:8080
       CSV_DB_DIR: /app/data
-      # Optional: seed an initial admin user (username/password)
-      DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-}
-      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}
+      DEV_AUTH_ENABLED: "true"

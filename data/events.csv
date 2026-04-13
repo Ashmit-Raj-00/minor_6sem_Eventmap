@@ -1,1 +1,1 @@
-id,title,description,starts_at,ends_at,lat,lng,address,tags,checkin_radius_km,created_by,created_at
+id,title,description,goal,goal_target,goal_unit,instructions,visibility,status,starts_at,ends_at,lat,lng,address,tags,created_by,created_at

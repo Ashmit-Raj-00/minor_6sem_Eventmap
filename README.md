@@ -1,11 +1,12 @@
-# EventMap (MVP)
+# Event Execution Platform (MVP)
 
-Event management web app with a map UI:
+Scalable event execution + collaboration backend with a simple web UI:
 
 - Go backend (`net/http`) with JWT auth + basic RBAC
-- Event + session + participant APIs
-- Background (async) notifications + analytics workers (goroutines)
-- Leaflet + OpenStreetMap tiles frontend
+- Event + participant + task + submission (proof) APIs
+- Proof validation flow (approve/reject) with XP + activity logs
+- In-app notifications + real-time chat via SSE
+- CSV persistence for local/dev (swap for Postgres in production)
 
 ## Run
 
@@ -13,6 +14,8 @@ Event management web app with a map UI:
 mkdir -p /tmp/go-cache /tmp/go-modcache
 CGO_ENABLED=0 GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-modcache go run ./cmd/server
 ```
+
+Open `http://localhost:8080`.
 
 ## CSV “Database” (local persistence)
 
@@ -23,6 +26,47 @@ Set a custom location:
 ```bash
 export CSV_DB_DIR=./data
 ```
+
+## Auth
+
+- `POST /api/auth/dev` is enabled by default for local development (`DEV_AUTH_ENABLED=true`).
+- `POST /api/auth/google` exists, but full Google ID token signature verification is **not** implemented in this MVP.
+  - For local prototyping you can set `UNSAFE_SKIP_GOOGLE_VERIFY=true` (not recommended for production).
+
+## Roles
+
+- Default role on first login: `operator`
+- Switch roles: `POST /api/me/role` (`operator` ↔ `commander`)
+
+## Core API
+
+- Auth/profile:
+  - `POST /api/auth/dev` → `{ token, user }`
+  - `POST /api/auth/google` → `{ token, user }`
+  - `GET /api/me`
+  - `GET /api/me/activity`
+  - `POST /api/me/role`
+- Events:
+  - `GET /api/events`
+  - `POST /api/events` (commander)
+  - `GET /api/events/{id}`
+  - `POST /api/events/{id}/join`
+  - `GET /api/events/{id}/participants` (commander, owner)
+  - `GET /api/events/{id}/dashboard` (commander, owner)
+  - `POST /api/events/{id}/announce` (commander, owner)
+- Tasks & proof:
+  - `GET /api/events/{id}/tasks`
+  - `POST /api/events/{id}/tasks` (commander, owner)
+  - `POST /api/tasks/{id}/start`
+  - `POST /api/tasks/{id}/submit` (multipart: `image`, optional `comment`, `lat`, `lng`)
+  - `GET /api/tasks/{id}/latest-submission`
+  - `POST /api/tasks/{id}/review` (commander, owner)
+- Chat & notifications:
+  - `GET/POST /api/events/{id}/chat`
+  - `GET /api/events/{id}/chat/stream` (SSE; uses `?token=...` for EventSource)
+  - `GET /api/notifications`
+  - `POST /api/notifications` (mark read)
+  - `GET /api/leaderboard`
 
 ### Fedora / GNAT toolchain note
 
@@ -40,44 +84,12 @@ Or use the helper script:
 bash scripts/run-server.sh
 ```
 
-Open `http://localhost:8080`.
-
-## Roles
-
-- Register as `attendee` or `organizer`
-- Only `organizer`/`admin` can create events and sessions
-
-Optional default admin user:
-
-```bash
-export DEFAULT_ADMIN_USERNAME=admin
-export DEFAULT_ADMIN_PASSWORD=changeme
-```
-
-## API quick peek
-
-- `POST /api/auth/register`
-- `POST /api/auth/login` → `{ token }`
-- `GET /api/me`
-- `GET /api/events`
-- `GET /api/events/nearby?lat=..&lng=..&radius_km=..`
-- `POST /api/events`
-- `POST /api/events/{id}/join`
-- `POST /api/events/{id}/checkin` (location-gated)
-- `POST /api/events/{id}/tag` (location-gated)
-- `GET/POST /api/events/{id}/sessions`
-- `GET /api/events/{id}/participants`
-- `GET /api/leaderboard`
-- `GET /api/events/{id}/leaderboard`
-
 ## Docker (deployment-ready)
 
 ```bash
 docker build -t eventmap .
 docker run --rm -p 8080:8080 \
   -e PUBLIC_ORIGIN=http://localhost:8080 \
-  -e DEFAULT_ADMIN_USERNAME=admin \
-  -e DEFAULT_ADMIN_PASSWORD=changeme \
   eventmap
 ```
 

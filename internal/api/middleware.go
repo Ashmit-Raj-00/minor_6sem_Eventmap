@@ -156,16 +156,22 @@ func withAuth(cfg config.Config, st *store.Memory) middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h := r.Header.Get("Authorization")
-			if h == "" {
-				next.ServeHTTP(w, r)
-				return
+			var token string
+			if h != "" {
+				parts := strings.SplitN(h, " ", 2)
+				if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+					writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "invalid_authorization"})
+					return
+				}
+				token = strings.TrimSpace(parts[1])
+			} else {
+				// SSE/EventSource cannot set headers; allow a query-string token for those cases.
+				token = strings.TrimSpace(r.URL.Query().Get("token"))
+				if token == "" {
+					next.ServeHTTP(w, r)
+					return
+				}
 			}
-			parts := strings.SplitN(h, " ", 2)
-			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-				writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "invalid_authorization"})
-				return
-			}
-			token := strings.TrimSpace(parts[1])
 			now := time.Now()
 
 			claims, err := auth.VerifyHS256(cfg.JWTSecret, token, now)

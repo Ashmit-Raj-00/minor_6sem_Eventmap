@@ -24,15 +24,11 @@ func main() {
 	})
 	defer jobRunner.Close()
 
-	memStore := store.NewMemory(store.MemoryConfig{
-		PasswordIterations: cfg.PasswordIterations,
-	})
+	memStore := store.NewMemory()
 
 	if err := store.LoadFromCSV(memStore, cfg.CSVDBDir); err != nil {
 		log.Printf("csvdb load failed: %v", err)
 	}
-
-	store.SeedDefaultAdmin(memStore, cfg.DefaultAdminUsername, cfg.DefaultAdminPassword)
 
 	var persistMu sync.Mutex
 	persist := func() error {

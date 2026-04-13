@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"eventmap/internal/geo"
 )
 
 var (
@@ -325,6 +327,15 @@ func (m *Memory) CreateTask(t Task) (Task, error) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	for _, id := range m.tasksByEvent[t.EventID] {
+		existing, ok := m.tasksByID[id]
+		if !ok {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(existing.Title), strings.TrimSpace(t.Title)) {
+			return Task{}, ErrAlreadyExists
+		}
+	}
 	m.tasksByID[t.ID] = t
 	m.tasksByEvent[t.EventID] = append(m.tasksByEvent[t.EventID], t.ID)
 	return t, nil
@@ -414,6 +425,14 @@ func (m *Memory) SubmitTask(taskID, userID, imageURL, comment string, lat, lng f
 	}
 	if t.StartedBy != userID {
 		return Task{}, Submission{}, ErrForbidden
+	}
+	if t.HasLocation {
+		if !hasGeo {
+			return Task{}, Submission{}, errors.New("geo_required")
+		}
+		if geo.DistanceKm(lat, lng, t.Lat, t.Lng) > 0.75 {
+			return Task{}, Submission{}, ErrForbidden
+		}
 	}
 
 	now := time.Now()
@@ -579,6 +598,45 @@ func (m *Memory) UserXP(userID string) int {
 	return m.userXP[userID]
 }
 
+func (m *Memory) ListXPLogs(userID string, limit int) []XPLog {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make([]XPLog, 0, limit)
+	for i := len(m.xpLogs) - 1; i >= 0 && len(out) < limit; i-- {
+		if m.xpLogs[i].UserID == userID {
+			out = append(out, m.xpLogs[i])
+		}
+	}
+	return out
+}
+
+func (m *Memory) UserReliability(userID string) (approved int, rejected int, approvalRatio float64) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, sub := range m.submissionsByID {
+		if sub.OperatorID != userID {
+			continue
+		}
+		switch sub.Status {
+		case SubmissionApproved:
+			approved++
+		case SubmissionRejected:
+			rejected++
+		}
+	}
+	total := approved + rejected
+	if total == 0 {
+		return approved, rejected, 0
+	}
+	return approved, rejected, float64(approved) / float64(total)
+}
+
 func (m *Memory) Leaderboard(limit int) []Score {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -669,13 +727,31 @@ func (m *Memory) EventDashboard(eventID, commanderID string) (map[string]any, er
 		activeParticipants++
 	}
 
-	top := make([]Score, 0, len(m.eventXP[eventID]))
-	for userID, xp := range m.eventXP[eventID] {
-		top = append(top, Score{UserID: userID, XP: xp})
+	type contributor struct {
+		UserID   string `json:"userId"`
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		PhotoURL string `json:"photoUrl,omitempty"`
+		XP       int    `json:"xp"`
 	}
-	sort.Slice(top, func(i, j int) bool { return top[i].XP > top[j].XP })
-	if len(top) > 10 {
-		top = top[:10]
+	topRaw := make([]contributor, 0, len(m.eventXP[eventID]))
+	for userID, xp := range m.eventXP[eventID] {
+		u := m.usersByID[userID]
+		topRaw = append(topRaw, contributor{UserID: userID, Name: u.Name, Email: u.Email, PhotoURL: u.PhotoURL, XP: xp})
+	}
+	sort.Slice(topRaw, func(i, j int) bool { return topRaw[i].XP > topRaw[j].XP })
+	if len(topRaw) > 10 {
+		topRaw = topRaw[:10]
+	}
+	top := make([]map[string]any, 0, len(topRaw))
+	for _, c := range topRaw {
+		top = append(top, map[string]any{
+			"userId":   c.UserID,
+			"name":     c.Name,
+			"email":    c.Email,
+			"photoUrl": c.PhotoURL,
+			"xp":       c.XP,
+		})
 	}
 
 	return map[string]any{
@@ -923,4 +999,3 @@ func randomID(nbytes int) string {
 	_, _ = rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }
-

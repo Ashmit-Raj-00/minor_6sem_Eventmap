@@ -12,16 +12,19 @@ import (
 )
 
 type Config struct {
-	Port               int
-	PublicOrigin       string
-	JWTSecret          []byte
-	TokenTTL           time.Duration
-	PasswordIterations int
+	Port         int
+	PublicOrigin string
+	JWTSecret    []byte
+	TokenTTL     time.Duration
 
 	CSVDBDir string
 
-	DefaultAdminUsername string
-	DefaultAdminPassword string
+	GoogleClientID string
+	DevAuthEnabled bool
+	UnsafeSkipGoogleVerify bool
+
+	UploadsDir      string
+	MaxUploadBytes  int64
 }
 
 func FromEnv() Config {
@@ -41,7 +44,6 @@ func FromEnv() Config {
 	}
 
 	tokenTTL := envDuration("TOKEN_TTL", 12*time.Hour)
-	passwordIterations := envInt("PASSWORD_ITERATIONS", 120_000)
 	csvDir := strings.TrimSpace(os.Getenv("CSV_DB_DIR"))
 	if csvDir == "" {
 		csvDir = "data"
@@ -50,20 +52,23 @@ func FromEnv() Config {
 		}
 	}
 
-	defaultAdminUsername := strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_USERNAME"))
-	if defaultAdminUsername == "" {
-		defaultAdminUsername = strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_EMAIL"))
+	uploadsDir := strings.TrimSpace(os.Getenv("UPLOADS_DIR"))
+	if uploadsDir == "" {
+		uploadsDir = filepath.Join(csvDir, "uploads")
 	}
+	_ = os.MkdirAll(uploadsDir, 0o755)
 
 	return Config{
-		Port:                 port,
-		PublicOrigin:         publicOrigin,
-		JWTSecret:            jwtSecret,
-		TokenTTL:             tokenTTL,
-		PasswordIterations:   passwordIterations,
-		CSVDBDir:             csvDir,
-		DefaultAdminUsername: defaultAdminUsername,
-		DefaultAdminPassword: strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_PASSWORD")),
+		Port:            port,
+		PublicOrigin:    publicOrigin,
+		JWTSecret:       jwtSecret,
+		TokenTTL:        tokenTTL,
+		CSVDBDir:        csvDir,
+		GoogleClientID:  strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
+		DevAuthEnabled:  envBool("DEV_AUTH_ENABLED", true),
+		UnsafeSkipGoogleVerify: envBool("UNSAFE_SKIP_GOOGLE_VERIFY", false),
+		UploadsDir:      uploadsDir,
+		MaxUploadBytes:  envInt64("MAX_UPLOAD_BYTES", 8<<20), // 8 MiB
 	}
 }
 
@@ -97,24 +102,35 @@ func envDuration(key string, def time.Duration) time.Duration {
 	return d
 }
 
+func envBool(key string, def bool) bool {
+	v := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if v == "" {
+		return def
+	}
+	switch v {
+	case "1", "true", "yes", "y":
+		return true
+	case "0", "false", "no", "n":
+		return false
+	default:
+		return def
+	}
+}
+
+func envInt64(key string, def int64) int64 {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return def
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return def
+	}
+	return n
+}
+
 func randomSecret(n int) []byte {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return []byte(base64.RawURLEncoding.EncodeToString(b))
-}
-
-func splitCSV(v string) []string {
-	v = strings.TrimSpace(v)
-	if v == "" {
-		return nil
-	}
-	parts := strings.Split(v, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(strings.ToLower(p))
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
 }
